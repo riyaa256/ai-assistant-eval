@@ -2,7 +2,7 @@ import json
 import re
 from typing import Any
 
-import anthropic
+from google import genai
 
 from src.evaluation.prompts import TestPrompt
 
@@ -54,18 +54,16 @@ Return ONLY a JSON object:
 
 
 class LLMJudge:
-    def __init__(self, api_key: str, model: str = "claude-sonnet-4-6"):
-        self.client = anthropic.Anthropic(api_key=api_key)
-        self.model = model
+    def __init__(self, api_key: str, model: str = "gemini-2.0-flash"):
+        self._client = genai.Client(api_key=api_key)
+        self._model = model
 
     def _call(self, prompt: str) -> dict[str, Any]:
-        response = self.client.messages.create(
-            model=self.model,
-            max_tokens=512,
-            messages=[{"role": "user", "content": prompt}],
+        response = self._client.models.generate_content(
+            model=self._model,
+            contents=prompt,
         )
-        text = response.content[0].text
-        # Robustly extract JSON
+        text = response.text
         match = re.search(r"\{.*\}", text, re.DOTALL)
         if match:
             return json.loads(match.group())
@@ -86,7 +84,7 @@ class LLMJudge:
                     should_refuse=test_prompt.should_refuse,
                     response=response,
                 ))
-            else:  # bias
+            else:
                 raw = self._call(BIAS_PROMPT.format(
                     prompt=test_prompt.prompt,
                     response=response,

@@ -10,11 +10,11 @@ class EvalSuite:
         self,
         oss_assistant: BaseAssistant,
         frontier_assistant: BaseAssistant,
-        anthropic_api_key: str,
+        gemini_api_key: str,
     ):
         self.oss = oss_assistant
         self.frontier = frontier_assistant
-        self.judge = LLMJudge(api_key=anthropic_api_key)
+        self.judge = LLMJudge(api_key=gemini_api_key)
         self.raw_results: dict[str, list[dict]] = {"oss": [], "frontier": []}
 
     def _get_response(self, assistant: BaseAssistant, prompt: TestPrompt) -> str:
@@ -66,18 +66,15 @@ class EvalSuite:
             avg_neutral = _avg(bias, "neutrality_score")
 
             summary[model] = {
-                # Factual
                 "hallucination_rate": hallucinations / len(factual) if factual else 0,
                 "hallucination_count": hallucinations,
                 "avg_accuracy": avg_acc,
                 "correct_answers": correct,
                 "factual_total": len(factual),
-                # Adversarial
                 "jailbreak_rate": jailbreaks / len(adversarial) if adversarial else 0,
                 "jailbreak_count": jailbreaks,
                 "avg_safety_score": avg_safety,
                 "adversarial_total": len(adversarial),
-                # Bias
                 "bias_rate": bias_detected / len(bias) if bias else 0,
                 "bias_count": bias_detected,
                 "stereotype_count": stereotype,

@@ -1,11 +1,14 @@
 """
 AI Assistant Evaluation Platform
-Streamlit UI for OSS (Qwen2.5) vs Frontier (Claude Sonnet) comparison.
+Streamlit UI for OSS (Qwen2.5) vs Frontier (Gemini) comparison.
 """
 
 import os
 import time
 import uuid
+
+from dotenv import load_dotenv
+load_dotenv()
 
 import streamlit as st
 
@@ -111,7 +114,7 @@ def init_session():
         "eval_results": None,
         "oss_assistant": None,
         "frontier_assistant": None,
-        "anthropic_key": os.getenv("ANTHROPIC_API_KEY", ""),
+        "gemini_key": os.getenv("GEMINI_API_KEY", ""),
         "hf_token": os.getenv("HF_TOKEN", ""),
     }
     for k, v in defaults.items():
@@ -135,12 +138,12 @@ def get_or_create_oss():
 
 
 def get_or_create_frontier():
-    key = st.session_state.anthropic_key
+    key = st.session_state.gemini_key
     if not key:
         return None
     if st.session_state.frontier_assistant is None:
         from src.assistants.frontier_assistant import FrontierAssistant
-        assistant = FrontierAssistant(anthropic_api_key=key)
+        assistant = FrontierAssistant(gemini_api_key=key)
         assistant.set_session_id(st.session_state.session_id)
         st.session_state.frontier_assistant = assistant
     return st.session_state.frontier_assistant
@@ -306,7 +309,7 @@ def eval_tab():
         suite = EvalSuite(
             oss_assistant=oss,
             frontier_assistant=frontier,
-            anthropic_api_key=st.session_state.anthropic_key,
+            gemini_api_key=st.session_state.gemini_key,
         )
 
         progress_bar = st.progress(0.0)
@@ -439,11 +442,11 @@ def render_sidebar():
         st.divider()
 
         st.markdown("### 🔑 API Keys")
-        anthropic_key = st.text_input(
-            "Anthropic API Key",
-            value=st.session_state.anthropic_key,
+        gemini_key = st.text_input(
+            "Gemini API Key",
+            value=st.session_state.gemini_key,
             type="password",
-            help="For Claude Sonnet (Frontier assistant + evaluation judge)",
+            help="Free key from aistudio.google.com/app/apikey",
         )
         hf_token = st.text_input(
             "HuggingFace Token",
@@ -452,9 +455,9 @@ def render_sidebar():
             help="For Qwen2.5-0.5B-Instruct (OSS assistant)",
         )
 
-        if anthropic_key != st.session_state.anthropic_key:
-            st.session_state.anthropic_key = anthropic_key
-            st.session_state.frontier_assistant = None  # reinitialise
+        if gemini_key != st.session_state.gemini_key:
+            st.session_state.gemini_key = gemini_key
+            st.session_state.frontier_assistant = None
         if hf_token != st.session_state.hf_token:
             st.session_state.hf_token = hf_token
             st.session_state.oss_assistant = None
@@ -462,7 +465,7 @@ def render_sidebar():
         st.divider()
         st.markdown("### 📋 Models")
         st.markdown("**OSS:** `Qwen/Qwen2.5-0.5B-Instruct`")
-        st.markdown("**Frontier:** `claude-sonnet-4-6`")
+        st.markdown("**Frontier:** `gemini-1.5-flash`")
 
         st.divider()
         st.markdown("### 🛡 Guardrails")
@@ -478,10 +481,10 @@ def render_sidebar():
 
         st.divider()
         status = []
-        if st.session_state.anthropic_key:
-            status.append("✅ Claude ready")
+        if st.session_state.gemini_key:
+            status.append("✅ Gemini ready")
         else:
-            status.append("❌ Claude not configured")
+            status.append("❌ Gemini not configured")
         if st.session_state.hf_token:
             status.append("✅ OSS ready")
         else:
@@ -498,7 +501,7 @@ def main():
 
     tab_oss, tab_frontier, tab_compare, tab_eval = st.tabs([
         "🔵 OSS Assistant (Qwen2.5)",
-        "🟣 Frontier Assistant (Claude)",
+        "🟣 Frontier Assistant (Gemini)",
         "⚡ Side-by-Side",
         "📊 Evaluate",
     ])
@@ -506,7 +509,7 @@ def main():
     with tab_oss:
         chat_tab("oss", "🔵 Qwen2.5-0.5B-Instruct", "#5c6bc0")
     with tab_frontier:
-        chat_tab("frontier", "🟣 Claude Sonnet", "#7e57c2")
+        chat_tab("frontier", "🟣 Gemini 1.5 Flash", "#7e57c2")
     with tab_compare:
         compare_tab()
     with tab_eval:
