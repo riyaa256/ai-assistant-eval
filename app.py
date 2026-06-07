@@ -442,25 +442,15 @@ def render_sidebar():
         st.divider()
 
         st.markdown("### 🔑 API Keys")
-        groq_key = st.text_input(
-            "Groq API Key",
-            value=st.session_state.groq_key,
-            type="password",
-            help="Free key from console.groq.com — starts with gsk_...",
-        )
-        hf_token = st.text_input(
-            "HuggingFace Token",
-            value=st.session_state.hf_token,
-            type="password",
-            help="For Qwen2.5-0.5B-Instruct (OSS assistant)",
-        )
-
-        if groq_key != st.session_state.groq_key:
-            st.session_state.groq_key = groq_key
-            st.session_state.frontier_assistant = None
-        if hf_token != st.session_state.hf_token:
-            st.session_state.hf_token = hf_token
-            st.session_state.oss_assistant = None
+        st.caption("Keys are loaded from your `.env` file — never entered in the UI.")
+        if st.session_state.groq_key:
+            st.success("✅ Groq API Key — loaded")
+        else:
+            st.error("❌ GROQ_API_KEY missing from .env")
+        if st.session_state.hf_token:
+            st.success("✅ HuggingFace Token — loaded")
+        else:
+            st.error("❌ HF_TOKEN missing from .env")
 
         st.divider()
         st.markdown("### 📋 Models")
@@ -479,18 +469,6 @@ def render_sidebar():
         st.markdown("### 🔧 Tools")
         st.markdown("• Calculator\n• Date / Time\n• Web Search (DuckDuckGo)")
 
-        st.divider()
-        status = []
-        if st.session_state.groq_key:
-            status.append("✅ Groq (Llama 3.3) ready")
-        else:
-            status.append("❌ Groq not configured")
-        if st.session_state.hf_token:
-            status.append("✅ OSS ready")
-        else:
-            status.append("❌ OSS not configured")
-        for s in status:
-            st.markdown(s)
 
 
 # ── Main ───────────────────────────────────────────────────────────────────────

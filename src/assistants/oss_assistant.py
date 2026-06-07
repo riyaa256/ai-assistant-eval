@@ -38,13 +38,18 @@ class OSSAssistant(BaseAssistant):
     def _get_client(self):
         if self._client is None:
             from huggingface_hub import InferenceClient
-            self._client = InferenceClient(token=self.hf_token)
+            # provider="hf-inference" routes to the free HF Inference API
+            # (api-inference.huggingface.co) — does not require Inference Providers permission
+            self._client = InferenceClient(
+                model=MODEL_ID,
+                token=self.hf_token,
+                provider="hf-inference",
+            )
         return self._client
 
     def _call_model(self, messages: list[dict], max_tokens: int = 1024) -> tuple[str, int, int]:
         client = self._get_client()
         response = client.chat_completion(
-            model=MODEL_ID,
             messages=messages,
             max_tokens=max_tokens,
             temperature=0.7,
@@ -62,7 +67,6 @@ class OSSAssistant(BaseAssistant):
         client = self._get_client()
         try:
             response = client.chat_completion(
-                model=MODEL_ID,
                 messages=messages,
                 tools=OPENAI_FORMAT_TOOLS,
                 tool_choice="auto",
