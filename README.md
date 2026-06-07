@@ -1,15 +1,15 @@
 # AI Assistant Evaluation Platform
 
-A complete comparison platform for **Open-Source (Qwen2.5-0.5B-Instruct)** vs **Frontier (Gemini 2.0 Flash)** AI personal assistants — with multi-turn memory, tool use, guardrails, observability, and an automated LLM-as-judge evaluation framework.
+A complete comparison platform for **Open-Source (Qwen2.5-0.5B-Instruct)** vs **Frontier (Llama 3.3-70B via Groq)** AI personal assistants — with multi-turn memory, tool use, guardrails, observability, and an automated LLM-as-judge evaluation framework.
 
 ---
 
 ## Features
 
-| Feature | OSS (Qwen2.5) | Frontier (Gemini) |
+| Feature | OSS (Qwen2.5) | Frontier (Llama 3.3) |
 |---|---|---|
 | Multi-turn memory | ✅ sliding window | ✅ sliding window |
-| Tool use | ✅ prompt-based + native | ✅ native Gemini function calling |
+| Tool use | ✅ prompt-based + native | ✅ native OpenAI-format tool calling |
 | Calculator | ✅ | ✅ |
 | Web search | ✅ DuckDuckGo | ✅ DuckDuckGo |
 | Date/Time | ✅ | ✅ |
@@ -28,7 +28,7 @@ A complete comparison platform for **Open-Source (Qwen2.5-0.5B-Instruct)** vs **
 
 - Python 3.10+
 - HuggingFace token (free, read permissions) → [huggingface.co/settings/tokens](https://huggingface.co/settings/tokens)
-- Google Gemini API key (free) → [aistudio.google.com/app/apikey](https://aistudio.google.com/app/apikey) — click **"Create API key in new project"**, key starts with `AIzaSy...`
+- Groq API key (free, no credit card) → [console.groq.com](https://console.groq.com) — click **"API Keys" → "Create API key"**, key starts with `gsk_...`
 
 ### Install & Run
 
@@ -39,7 +39,7 @@ cd ai-assistant-eval
 pip install -r requirements.txt
 
 cp .env.example .env
-# Edit .env — add your HF_TOKEN and GEMINI_API_KEY
+# Edit .env — add your HF_TOKEN and GROQ_API_KEY
 
 streamlit run app.py
 ```
@@ -51,7 +51,7 @@ The Streamlit app opens at `http://localhost:8501`. API keys are loaded automati
 | Tab | Description |
 |---|---|
 | 🔵 OSS Assistant | Chat with Qwen2.5-0.5B-Instruct (via HuggingFace Inference API) |
-| 🟣 Frontier Assistant | Chat with Gemini 2.0 Flash (via Google AI API) |
+| 🟣 Frontier Assistant | Chat with Llama 3.3-70B (via Groq API) |
 | ⚡ Side-by-Side | Send one prompt to both, compare responses instantly |
 | 📊 Evaluate | Run 30-prompt evaluation suite with LLM-as-judge |
 
@@ -81,14 +81,14 @@ User message
 User message
     → Input guardrail
     → Conversation memory
-    → Google Gemini API (gemini-2.0-flash) with native function calling
-    → Automatic tool execution loop (SDK handles tool dispatch)
+    → Groq API (llama-3.3-70b-versatile) with OpenAI-format tool calling
+    → Tool execution loop (up to 5 steps, native function calling)
     → Output guardrail
     → Structured log (logs/frontier_logs.jsonl)
     → Response
 ```
 
-Uses the new `google-genai` SDK (`google.genai.Client`) with automatic function calling — Gemini decides whether to call tools and the SDK executes them automatically, returning the final text response.
+Uses the `groq` Python SDK with the OpenAI-compatible chat completions API. Supports native function/tool calling — Groq returns `finish_reason="tool_calls"` and the code dispatches tools, appending results as `role="tool"` messages before the next completion call.
 
 ### Memory (`src/memory/conversation_memory.py`)
 
@@ -108,8 +108,8 @@ Every request logs to a JSONL file:
   "session_id": "abc12345",
   "request_id": "f3e21a",
   "timestamp": "2026-06-12T10:00:00Z",
-  "model": "gemini-2.0-flash",
-  "latency_ms": 1240,
+  "model": "llama-3.3-70b-versatile",
+  "latency_ms": 420,
   "input_tokens": 312,
   "output_tokens": 87,
   "tool_calls": [{"name": "calculator", "result": "2+2 = 4"}],
@@ -133,7 +133,7 @@ Every request logs to a JSONL file:
 
 ### LLM-as-Judge (`src/evaluation/judge.py`)
 
-Uses **Gemini 2.0 Flash** to evaluate each response with category-specific rubrics:
+Uses **Llama 3.3-70B (Groq)** to evaluate each response with category-specific rubrics:
 
 - **Factual**: `accuracy_score` (0-10), `hallucination_detected` (bool), `contains_correct_answer`
 - **Adversarial**: `safety_score` (0-10), `jailbreak_success` (bool), `refusal_quality` (0-10)
@@ -173,7 +173,7 @@ The `deployment/hf_spaces/` directory contains a standalone Gradio app.
 | Modal (A10G serverless) | 0.4–1.2s | ~$0.002 | Cold-start ~2s |
 | RunPod (RTX 4090) | 0.3–0.9s | ~$0.003 | Persistent endpoint |
 | Replicate | 1–3s | ~$0.002 | Push-to-deploy |
-| **Gemini 2.0 Flash (Frontier)** | 0.5–2s | Free tier / $0.001 | 1M tokens/day free |
+| **Groq (Frontier)** | 0.2–0.8s | Free tier / ~$0.0006 | Hardware-accelerated LPU, 14k req/day free |
 
 ---
 
@@ -182,11 +182,11 @@ The `deployment/hf_spaces/` directory contains a standalone Gradio app.
 ### Why Qwen2.5-0.5B-Instruct?
 Recommended by the assignment for HF Spaces deployment. Small enough to run on free-tier serverless inference while still instruction-tuned. For production, Qwen2.5-7B or Llama 3.2-3B would give substantially better quality.
 
-### Why Gemini 2.0 Flash as the Frontier model?
-Completely free (1M tokens/day free tier, no credit card required), fast (~1-2s), and it's a genuine frontier model from Google — a major AI lab. Matches the assignment's intent for a "hosted foundation model" comparison.
+### Why Llama 3.3-70B via Groq as the Frontier model?
+Completely free (14,400 requests/day, no credit card required), extremely fast (~200-800ms due to Groq's custom LPU hardware), and Llama 3.3-70B is a genuine frontier-class open model that matches GPT-4o on many benchmarks. Matches the assignment's intent for a "hosted foundation model" comparison.
 
-### Why the new `google-genai` SDK?
-The older `google.generativeai` package is deprecated. The new `google-genai` package (`google.genai.Client`) is the official replacement with better support for automatic function calling.
+### Why the `groq` SDK?
+OpenAI-compatible API — the same tool-calling format used by the OSS model, making both assistants consistent. Groq's LPU hardware delivers sub-second latency even for the 70B model.
 
 ### Why sliding-window memory vs. summarization?
 Sliding window is deterministic and doesn't require extra API calls. For the 0.5B OSS model, keeping context short (20 turns) also prevents quality degradation from long prompts.
@@ -204,7 +204,7 @@ Free, no API key required, sufficient for demo purposes. In production, Serper/B
 | Decision | Chosen | Alternative | Why |
 |---|---|---|---|
 | OSS model size | 0.5B | 7B+ | Free HF tier vs. better quality |
-| Frontier model | Gemini 2.0 Flash | GPT-4 / Claude | Free vs. paid |
+| Frontier model | Llama 3.3-70B (Groq) | GPT-4 / Claude | Free + fast vs. paid |
 | Memory | Sliding window | Vector DB (RAG) | Simplicity vs. semantic retrieval |
 | Guardrails | Regex | Llama Guard | Zero-latency vs. better coverage |
 | Web search | DuckDuckGo | Serper/Google | Free vs. reliable |
@@ -237,11 +237,11 @@ ai-assistant-eval/
 │   ├── assistants/
 │   │   ├── base.py                 # Abstract BaseAssistant
 │   │   ├── oss_assistant.py        # Qwen2.5 via HF Inference API
-│   │   └── frontier_assistant.py   # Gemini 2.0 Flash via google-genai SDK
+│   │   └── frontier_assistant.py   # Llama 3.3-70B via Groq API
 │   ├── memory/
 │   │   └── conversation_memory.py  # Sliding-window history
 │   ├── tools/
-│   │   ├── tool_registry.py        # Tool definitions
+│   │   ├── tool_registry.py        # Tool definitions (OpenAI + Anthropic format)
 │   │   ├── calculator.py           # Safe AST-based calculator
 │   │   ├── datetime_tool.py        # Current date/time
 │   │   └── web_search.py           # DuckDuckGo search
@@ -252,7 +252,7 @@ ai-assistant-eval/
 │   │   └── logger.py               # Structured JSONL logging + metrics
 │   └── evaluation/
 │       ├── prompts.py              # 30 test prompts (factual/adversarial/bias)
-│       ├── judge.py                # LLM-as-judge (Gemini 2.0 Flash)
+│       ├── judge.py                # LLM-as-judge (Llama 3.3-70B via Groq)
 │       └── eval_suite.py           # Evaluation runner + metrics
 └── deployment/
     └── hf_spaces/

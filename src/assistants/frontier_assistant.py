@@ -1,16 +1,16 @@
+import json
 import time
 
-from google import genai
-from google.genai import types
+from groq import Groq
 
 from src.assistants.base import BaseAssistant
 from src.guardrails.input_guard import check_input
 from src.guardrails.output_guard import check_output
 from src.observability.logger import RequestLog, make_request_id, now_iso
-from src.tools.tool_registry import execute_tool
+from src.tools.tool_registry import OPENAI_FORMAT_TOOLS, execute_tool
 
 FRONTIER_SYSTEM_PROMPT = (
-    "You are a helpful, harmless, and honest AI personal assistant powered by Gemini. "
+    "You are a helpful, harmless, and honest AI personal assistant powered by Llama 3.3. "
     "You help users with questions, writing, analysis, coding, and more. "
     "Maintain conversation context and refer back to earlier messages when relevant. "
     "When uncertain, say so. Always be accurate, helpful, and safe. "
@@ -18,48 +18,27 @@ FRONTIER_SYSTEM_PROMPT = (
     "give a more accurate or current answer."
 )
 
-DEFAULT_MODEL = "gemini-2.0-flash"
-
-
-def _calculator(expression: str) -> str:
-    """Evaluate a mathematical expression like 'sqrt(16) + 2*3'. Returns the result."""
-    return execute_tool("calculator", {"expression": expression})
-
-
-def _get_datetime(timezone: str = "UTC") -> str:
-    """Get the current date and time. Optionally pass a timezone like 'America/New_York'."""
-    return execute_tool("get_datetime", {"timezone": timezone})
-
-
-def _web_search(query: str, max_results: int = 3) -> str:
-    """Search the internet for current information about any topic."""
-    return execute_tool("web_search", {"query": query, "max_results": max_results})
-
-
-TOOL_FUNCTIONS = {
-    "_calculator": "calculator",
-    "_get_datetime": "get_datetime",
-    "_web_search": "web_search",
-}
+DEFAULT_MODEL = "llama-3.3-70b-versatile"
+MAX_TOOL_STEPS = 5
 
 
 class FrontierAssistant(BaseAssistant):
-    def __init__(self, gemini_api_key: str, model: str = DEFAULT_MODEL):
+    def __init__(self, groq_api_key: str, model: str = DEFAULT_MODEL):
         super().__init__(
             model_name=model,
             model_type="frontier",
             system_prompt=FRONTIER_SYSTEM_PROMPT,
         )
-        self._client = genai.Client(api_key=gemini_api_key)
+        self._client = Groq(api_key=groq_api_key)
         self._model = model
 
-    def _build_history(self) -> list:
-        """Convert our memory to Gemini Content objects."""
-        history = []
-        for user_msg, assistant_msg in self.memory.get_history_display():
-            history.append(types.Content(role="user", parts=[types.Part(text=user_msg)]))
-            history.append(types.Content(role="model", parts=[types.Part(text=assistant_msg)]))
-        return history
+    def _build_messages(self, user_message: str) -> list[dict]:
+        msgs = [{"role": "system", "content": FRONTIER_SYSTEM_PROMPT}]
+        for user_msg, asst_msg in self.memory.get_history_display():
+            msgs.append({"role": "user", "content": user_msg})
+            msgs.append({"role": "assistant", "content": asst_msg})
+        msgs.append({"role": "user", "content": user_message})
+        return msgs
 
     def chat(self, message: str) -> tuple[str, dict]:
         start_time = time.time()
@@ -93,36 +72,58 @@ class FrontierAssistant(BaseAssistant):
             }
 
         try:
-            config = types.GenerateContentConfig(
-                system_instruction=FRONTIER_SYSTEM_PROMPT,
-                tools=[_calculator, _get_datetime, _web_search],
-                automatic_function_calling=types.AutomaticFunctionCallingConfig(
-                    disable=False
-                ),
-            )
+            messages = self._build_messages(message)
+            in_tok = out_tok = 0
+            response_text = ""
 
-            history = self._build_history()
-            history.append(types.Content(role="user", parts=[types.Part(text=message)]))
+            for _ in range(MAX_TOOL_STEPS):
+                resp = self._client.chat.completions.create(
+                    model=self._model,
+                    messages=messages,
+                    tools=OPENAI_FORMAT_TOOLS,
+                    tool_choice="auto",
+                )
+                usage = resp.usage
+                if usage:
+                    in_tok += usage.prompt_tokens or 0
+                    out_tok += usage.completion_tokens or 0
 
-            response = self._client.models.generate_content(
-                model=self._model,
-                contents=history,
-                config=config,
-            )
+                choice = resp.choices[0]
+                msg = choice.message
 
-            # Handle automatic function calling — SDK executes tools and returns final text
-            response_text = response.text or ""
-
-            # Check if any tool calls were recorded in the response
-            for candidate in response.candidates or []:
-                for part in candidate.content.parts or []:
-                    if hasattr(part, "function_call") and part.function_call:
-                        fc = part.function_call
-                        tool_key = TOOL_FUNCTIONS.get(fc.name, fc.name.lstrip("_"))
-                        tool_calls_made.append({
-                            "name": tool_key,
-                            "result": execute_tool(tool_key, dict(fc.args)),
+                if choice.finish_reason == "tool_calls" and msg.tool_calls:
+                    # Append assistant's tool-call message
+                    messages.append({
+                        "role": "assistant",
+                        "content": msg.content or "",
+                        "tool_calls": [
+                            {
+                                "id": tc.id,
+                                "type": "function",
+                                "function": {
+                                    "name": tc.function.name,
+                                    "arguments": tc.function.arguments,
+                                },
+                            }
+                            for tc in msg.tool_calls
+                        ],
+                    })
+                    # Execute each tool and append results
+                    for tc in msg.tool_calls:
+                        try:
+                            args = json.loads(tc.function.arguments)
+                        except Exception:
+                            args = {}
+                        result = execute_tool(tc.function.name, args)
+                        tool_calls_made.append({"name": tc.function.name, "result": result})
+                        messages.append({
+                            "role": "tool",
+                            "tool_call_id": tc.id,
+                            "content": str(result),
                         })
+                else:
+                    response_text = msg.content or ""
+                    break
 
             # Output guardrail
             out_guard = check_output(response_text)
@@ -132,10 +133,6 @@ class FrontierAssistant(BaseAssistant):
             self.memory.add_assistant_message(final_response)
 
             latency_ms = (time.time() - start_time) * 1000
-            usage = getattr(response, "usage_metadata", None)
-            in_tok = getattr(usage, "prompt_token_count", max(1, len(message) // 4)) or max(1, len(message) // 4)
-            out_tok = getattr(usage, "candidates_token_count", max(1, len(final_response) // 4)) or max(1, len(final_response) // 4)
-
             self.logger.log_request(RequestLog(
                 session_id=self._session_id,
                 request_id=request_id,

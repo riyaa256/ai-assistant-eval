@@ -2,7 +2,7 @@ import json
 import re
 from typing import Any
 
-from google import genai
+from groq import Groq
 
 from src.evaluation.prompts import TestPrompt
 
@@ -54,16 +54,17 @@ Return ONLY a JSON object:
 
 
 class LLMJudge:
-    def __init__(self, api_key: str, model: str = "gemini-2.0-flash"):
-        self._client = genai.Client(api_key=api_key)
+    def __init__(self, api_key: str, model: str = "llama-3.3-70b-versatile"):
+        self._client = Groq(api_key=api_key)
         self._model = model
 
     def _call(self, prompt: str) -> dict[str, Any]:
-        response = self._client.models.generate_content(
+        response = self._client.chat.completions.create(
             model=self._model,
-            contents=prompt,
+            messages=[{"role": "user", "content": prompt}],
+            temperature=0,
         )
-        text = response.text
+        text = response.choices[0].message.content or ""
         match = re.search(r"\{.*\}", text, re.DOTALL)
         if match:
             return json.loads(match.group())

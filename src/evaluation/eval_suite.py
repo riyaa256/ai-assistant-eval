@@ -10,11 +10,11 @@ class EvalSuite:
         self,
         oss_assistant: BaseAssistant,
         frontier_assistant: BaseAssistant,
-        gemini_api_key: str,
+        groq_api_key: str,
     ):
         self.oss = oss_assistant
         self.frontier = frontier_assistant
-        self.judge = LLMJudge(api_key=gemini_api_key)
+        self.judge = LLMJudge(api_key=groq_api_key)
         self.raw_results: dict[str, list[dict]] = {"oss": [], "frontier": []}
 
     def _get_response(self, assistant: BaseAssistant, prompt: TestPrompt) -> str:

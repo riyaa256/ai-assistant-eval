@@ -114,7 +114,7 @@ def init_session():
         "eval_results": None,
         "oss_assistant": None,
         "frontier_assistant": None,
-        "gemini_key": os.getenv("GEMINI_API_KEY", ""),
+        "groq_key": os.getenv("GROQ_API_KEY", ""),
         "hf_token": os.getenv("HF_TOKEN", ""),
     }
     for k, v in defaults.items():
@@ -138,12 +138,12 @@ def get_or_create_oss():
 
 
 def get_or_create_frontier():
-    key = st.session_state.gemini_key
+    key = st.session_state.groq_key
     if not key:
         return None
     if st.session_state.frontier_assistant is None:
         from src.assistants.frontier_assistant import FrontierAssistant
-        assistant = FrontierAssistant(gemini_api_key=key)
+        assistant = FrontierAssistant(groq_api_key=key)
         assistant.set_session_id(st.session_state.session_id)
         st.session_state.frontier_assistant = assistant
     return st.session_state.frontier_assistant
@@ -186,7 +186,7 @@ def chat_tab(assistant_key: str, title: str, color: str):
     st.markdown(f"## {title}")
 
     if assistant is None:
-        token_name = "HuggingFace Token" if assistant_key == "oss" else "Anthropic API Key"
+        token_name = "HuggingFace Token" if assistant_key == "oss" else "Groq API Key"
         st.warning(f"⚠️ Please enter your {token_name} in the sidebar to start chatting.")
         return
 
@@ -271,15 +271,15 @@ def compare_tab():
                 st.markdown("**🔵 Qwen2.5 (OSS)**")
                 render_message("assistant", oss_r, oss_m)
             with c2:
-                st.markdown("**🟣 Claude Sonnet (Frontier)**")
+                st.markdown("**🟣 Llama 3.3-70B (Frontier)**")
                 render_message("assistant", ft_r, ft_m)
 
             # Quick delta
             oss_lat = oss_m.get("latency_ms", 0)
             ft_lat = ft_m.get("latency_ms", 0)
-            faster = "Qwen2.5" if oss_lat < ft_lat else "Claude"
+            faster = "Qwen2.5" if oss_lat < ft_lat else "Llama 3.3"
             st.caption(
-                f"Latency — Qwen: {oss_lat:.0f}ms · Claude: {ft_lat:.0f}ms · "
+                f"Latency — Qwen: {oss_lat:.0f}ms · Llama: {ft_lat:.0f}ms · "
                 f"{faster} was faster by {abs(oss_lat - ft_lat):.0f}ms"
             )
             st.divider()
@@ -293,7 +293,7 @@ def eval_tab():
     st.markdown("## 📊 Evaluation Dashboard")
     st.markdown(
         "Runs **30 structured test prompts** across factual accuracy, adversarial/jailbreak "
-        "resistance, and bias/fairness. Uses Claude as an LLM judge to score every response."
+        "resistance, and bias/fairness. Uses Llama 3.3-70B as an LLM judge to score every response."
     )
 
     frontier = get_or_create_frontier()
@@ -309,7 +309,7 @@ def eval_tab():
         suite = EvalSuite(
             oss_assistant=oss,
             frontier_assistant=frontier,
-            gemini_api_key=st.session_state.gemini_key,
+            groq_api_key=st.session_state.groq_key,
         )
 
         progress_bar = st.progress(0.0)
@@ -363,7 +363,7 @@ def eval_tab():
     ))
     fig.add_trace(go.Scatterpolar(
         r=[ft_s["avg_accuracy"], ft_s["avg_safety_score"], ft_s["avg_neutrality"]],
-        theta=categories, fill="toself", name="Claude (Frontier)",
+        theta=categories, fill="toself", name="Llama 3.3 (Frontier)",
         line_color="#7e57c2",
     ))
     fig.update_layout(
@@ -381,11 +381,11 @@ def eval_tab():
             oss_s["avg_accuracy"], oss_s["avg_safety_score"], oss_s["avg_neutrality"],
             ft_s["avg_accuracy"], ft_s["avg_safety_score"], ft_s["avg_neutrality"],
         ],
-        "Model": ["Qwen2.5"] * 3 + ["Claude"] * 3,
+        "Model": ["Qwen2.5"] * 3 + ["Llama 3.3"] * 3,
     })
     fig2 = px.bar(
         bar_df, x="Category", y="Score", color="Model", barmode="group",
-        color_discrete_map={"Qwen2.5": "#5c6bc0", "Claude": "#7e57c2"},
+        color_discrete_map={"Qwen2.5": "#5c6bc0", "Llama 3.3": "#7e57c2"},
         range_y=[0, 10],
     )
     fig2.update_layout(paper_bgcolor="#0f1117", plot_bgcolor="#1a1d27", font_color="#e0e0e0")
@@ -442,11 +442,11 @@ def render_sidebar():
         st.divider()
 
         st.markdown("### 🔑 API Keys")
-        gemini_key = st.text_input(
-            "Gemini API Key",
-            value=st.session_state.gemini_key,
+        groq_key = st.text_input(
+            "Groq API Key",
+            value=st.session_state.groq_key,
             type="password",
-            help="Free key from aistudio.google.com/app/apikey",
+            help="Free key from console.groq.com — starts with gsk_...",
         )
         hf_token = st.text_input(
             "HuggingFace Token",
@@ -455,8 +455,8 @@ def render_sidebar():
             help="For Qwen2.5-0.5B-Instruct (OSS assistant)",
         )
 
-        if gemini_key != st.session_state.gemini_key:
-            st.session_state.gemini_key = gemini_key
+        if groq_key != st.session_state.groq_key:
+            st.session_state.groq_key = groq_key
             st.session_state.frontier_assistant = None
         if hf_token != st.session_state.hf_token:
             st.session_state.hf_token = hf_token
@@ -465,7 +465,7 @@ def render_sidebar():
         st.divider()
         st.markdown("### 📋 Models")
         st.markdown("**OSS:** `Qwen/Qwen2.5-0.5B-Instruct`")
-        st.markdown("**Frontier:** `gemini-1.5-flash`")
+        st.markdown("**Frontier:** `llama-3.3-70b-versatile` (Groq)")
 
         st.divider()
         st.markdown("### 🛡 Guardrails")
@@ -481,10 +481,10 @@ def render_sidebar():
 
         st.divider()
         status = []
-        if st.session_state.gemini_key:
-            status.append("✅ Gemini ready")
+        if st.session_state.groq_key:
+            status.append("✅ Groq (Llama 3.3) ready")
         else:
-            status.append("❌ Gemini not configured")
+            status.append("❌ Groq not configured")
         if st.session_state.hf_token:
             status.append("✅ OSS ready")
         else:
@@ -501,7 +501,7 @@ def main():
 
     tab_oss, tab_frontier, tab_compare, tab_eval = st.tabs([
         "🔵 OSS Assistant (Qwen2.5)",
-        "🟣 Frontier Assistant (Gemini)",
+        "🟣 Frontier Assistant (Llama 3.3)",
         "⚡ Side-by-Side",
         "📊 Evaluate",
     ])
@@ -509,7 +509,7 @@ def main():
     with tab_oss:
         chat_tab("oss", "🔵 Qwen2.5-0.5B-Instruct", "#5c6bc0")
     with tab_frontier:
-        chat_tab("frontier", "🟣 Gemini 1.5 Flash", "#7e57c2")
+        chat_tab("frontier", "🟣 Llama 3.3-70B (Groq)", "#7e57c2")
     with tab_compare:
         compare_tab()
     with tab_eval:
