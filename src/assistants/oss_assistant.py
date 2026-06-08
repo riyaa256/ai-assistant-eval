@@ -1,120 +1,43 @@
 import json
-import re
 import time
-from typing import Optional
+
+from groq import Groq
 
 from src.assistants.base import BaseAssistant
 from src.guardrails.input_guard import check_input
 from src.guardrails.output_guard import check_output
 from src.observability.logger import RequestLog, make_request_id, now_iso
-from src.tools.tool_registry import (
-    OPENAI_FORMAT_TOOLS,
-    TOOL_SYSTEM_ADDENDUM,
-    execute_tool,
-)
+from src.tools.tool_registry import OPENAI_FORMAT_TOOLS, execute_tool
 
 OSS_SYSTEM_PROMPT = (
     "You are a helpful, harmless, and honest AI personal assistant. "
     "You help users with questions, writing, analysis, coding, and more. "
     "You maintain conversation context and refer back to earlier parts of the conversation. "
     "When you don't know something, say so clearly. "
-    "Never generate harmful, biased, or misleading content.\n"
-    + TOOL_SYSTEM_ADDENDUM
+    "Never generate harmful, biased, or misleading content. "
+    "Use your available tools (calculator, get_datetime, web_search) when they would improve accuracy."
 )
 
-MODEL_ID = "Qwen/Qwen2.5-0.5B-Instruct"
+MODEL_ID = "llama-3.1-8b-instant"
+MAX_TOOL_STEPS = 3
 
 
 class OSSAssistant(BaseAssistant):
-    def __init__(self, hf_token: str):
+    def __init__(self, groq_api_key: str):
         super().__init__(
             model_name=MODEL_ID,
             model_type="oss",
             system_prompt=OSS_SYSTEM_PROMPT,
         )
-        self.hf_token = hf_token
-        self._client = None
+        self._client = Groq(api_key=groq_api_key)
 
-    def _get_client(self):
-        if self._client is None:
-            from huggingface_hub import InferenceClient
-            # provider="hf-inference" routes to the free HF Inference API
-            # (api-inference.huggingface.co) — does not require Inference Providers permission
-            self._client = InferenceClient(
-                model=MODEL_ID,
-                token=self.hf_token,
-                provider="hf-inference",
-            )
-        return self._client
-
-    def _call_model(self, messages: list[dict], max_tokens: int = 1024) -> tuple[str, int, int]:
-        client = self._get_client()
-        response = client.chat_completion(
-            messages=messages,
-            max_tokens=max_tokens,
-            temperature=0.7,
-        )
-        content = response.choices[0].message.content or ""
-        usage = getattr(response, "usage", None)
-        input_tokens = getattr(usage, "prompt_tokens", max(1, len(str(messages)) // 4))
-        output_tokens = getattr(usage, "completion_tokens", max(1, len(content) // 4))
-        return content, input_tokens, output_tokens
-
-    def _call_model_with_native_tools(
-        self, messages: list[dict], max_tokens: int = 1024
-    ) -> tuple[str, list[dict], int, int]:
-        """Try native tool calling; fall back to prompt-based parsing."""
-        client = self._get_client()
-        try:
-            response = client.chat_completion(
-                messages=messages,
-                tools=OPENAI_FORMAT_TOOLS,
-                tool_choice="auto",
-                max_tokens=max_tokens,
-                temperature=0.7,
-            )
-            msg = response.choices[0].message
-            tool_calls = getattr(msg, "tool_calls", None) or []
-            usage = getattr(response, "usage", None)
-            input_tokens = getattr(usage, "prompt_tokens", max(1, len(str(messages)) // 4))
-            output_tokens = getattr(usage, "completion_tokens", 50)
-
-            if tool_calls:
-                parsed = []
-                for tc in tool_calls:
-                    fn = tc.function
-                    args = json.loads(fn.arguments) if isinstance(fn.arguments, str) else fn.arguments
-                    parsed.append({
-                        "id": getattr(tc, "id", make_request_id()),
-                        "name": fn.name,
-                        "arguments": args,
-                    })
-                return msg.content or "", parsed, input_tokens, output_tokens
-
-            content = msg.content or ""
-            return content, [], input_tokens, output_tokens
-        except Exception:
-            # Fall back to plain call + regex parse
-            content, in_tok, out_tok = self._call_model(messages, max_tokens)
-            parsed = self._parse_tool_call_from_text(content)
-            return content, parsed, in_tok, out_tok
-
-    def _parse_tool_call_from_text(self, text: str) -> list[dict]:
-        """Parse ```tool_call ... ``` blocks from model output."""
-        pattern = r"```tool_call\s*\n(.*?)\n```"
-        matches = re.findall(pattern, text, re.DOTALL)
-        result = []
-        for m in matches:
-            try:
-                data = json.loads(m.strip())
-                result.append({
-                    "id": make_request_id(),
-                    "name": data.get("name", ""),
-                    "arguments": data.get("arguments", {}),
-                })
-            except json.JSONDecodeError:
-                pass
-        return result
+    def _build_messages(self, user_message: str) -> list[dict]:
+        msgs = [{"role": "system", "content": OSS_SYSTEM_PROMPT}]
+        for user_msg, asst_msg in self.memory.get_history_display():
+            msgs.append({"role": "user", "content": user_msg})
+            msgs.append({"role": "assistant", "content": asst_msg})
+        msgs.append({"role": "user", "content": user_message})
+        return msgs
 
     def chat(self, message: str) -> tuple[str, dict]:
         start_time = time.time()
@@ -147,39 +70,65 @@ class OSSAssistant(BaseAssistant):
                 "guardrail_blocked": True,
             }
 
-        self.memory.add_user_message(message)
-        messages = self.memory.get_messages_for_api()
-        total_in = 0
-        total_out = 0
-
         try:
-            # Agentic tool loop (max 3 steps)
-            for _step in range(3):
-                content, parsed_tools, in_tok, out_tok = self._call_model_with_native_tools(messages)
-                total_in += in_tok
-                total_out += out_tok
+            messages = self._build_messages(message)
+            in_tok = out_tok = 0
+            response_text = ""
 
-                if not parsed_tools:
-                    break
+            for _ in range(MAX_TOOL_STEPS):
+                resp = self._client.chat.completions.create(
+                    model=MODEL_ID,
+                    messages=messages,
+                    tools=OPENAI_FORMAT_TOOLS,
+                    tool_choice="auto",
+                    max_tokens=1024,
+                    temperature=0.7,
+                )
+                usage = resp.usage
+                if usage:
+                    in_tok += usage.prompt_tokens or 0
+                    out_tok += usage.completion_tokens or 0
 
-                # Add assistant's partial response
-                messages.append({"role": "assistant", "content": content or ""})
+                choice = resp.choices[0]
+                msg = choice.message
 
-                for tc in parsed_tools:
-                    tool_result = execute_tool(tc["name"], tc["arguments"])
-                    tool_calls_made.append({"name": tc["name"], "result": tool_result})
-                    # Inject tool result for next model call
+                if choice.finish_reason == "tool_calls" and msg.tool_calls:
                     messages.append({
-                        "role": "user",
-                        "content": f"[Tool result for {tc['name']}]: {tool_result}",
+                        "role": "assistant",
+                        "content": msg.content or "",
+                        "tool_calls": [
+                            {
+                                "id": tc.id,
+                                "type": "function",
+                                "function": {
+                                    "name": tc.function.name,
+                                    "arguments": tc.function.arguments,
+                                },
+                            }
+                            for tc in msg.tool_calls
+                        ],
                     })
-
-            response_text = content
+                    for tc in msg.tool_calls:
+                        try:
+                            args = json.loads(tc.function.arguments)
+                        except Exception:
+                            args = {}
+                        result = execute_tool(tc.function.name, args)
+                        tool_calls_made.append({"name": tc.function.name, "result": result})
+                        messages.append({
+                            "role": "tool",
+                            "tool_call_id": tc.id,
+                            "content": str(result),
+                        })
+                else:
+                    response_text = msg.content or ""
+                    break
 
             # Output guardrail
             out_guard = check_output(response_text)
             final_response = out_guard.filtered_text
 
+            self.memory.add_user_message(message)
             self.memory.add_assistant_message(final_response)
             latency_ms = (time.time() - start_time) * 1000
 
@@ -192,8 +141,8 @@ class OSSAssistant(BaseAssistant):
                 user_message=message,
                 assistant_response=final_response,
                 latency_ms=latency_ms,
-                input_tokens=total_in,
-                output_tokens=total_out,
+                input_tokens=in_tok,
+                output_tokens=out_tok,
                 tool_calls=tool_calls_made,
                 guardrail_triggered=not out_guard.safe,
                 guardrail_category="output_filter" if not out_guard.safe else None,
@@ -201,15 +150,14 @@ class OSSAssistant(BaseAssistant):
 
             return final_response, {
                 "latency_ms": latency_ms,
-                "input_tokens": total_in,
-                "output_tokens": total_out,
+                "input_tokens": in_tok,
+                "output_tokens": out_tok,
                 "tool_calls": tool_calls_made,
                 "guardrail_blocked": False,
                 "output_filtered": out_guard.filtered,
             }
 
         except Exception as e:
-            self.memory.remove_last_user_message()
             latency_ms = (time.time() - start_time) * 1000
             error_msg = f"Error communicating with model: {e}"
             self.logger.log_request(RequestLog(

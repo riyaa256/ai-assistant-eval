@@ -115,7 +115,6 @@ def init_session():
         "oss_assistant": None,
         "frontier_assistant": None,
         "groq_key": os.getenv("GROQ_API_KEY", ""),
-        "hf_token": os.getenv("HF_TOKEN", ""),
     }
     for k, v in defaults.items():
         if k not in st.session_state:
@@ -123,15 +122,12 @@ def init_session():
 
 
 def get_or_create_oss():
-    key = st.session_state.hf_token
+    key = st.session_state.groq_key
     if not key:
         return None
-    if (
-        st.session_state.oss_assistant is None
-        or getattr(st.session_state.oss_assistant, "hf_token", "") != key
-    ):
+    if st.session_state.oss_assistant is None:
         from src.assistants.oss_assistant import OSSAssistant
-        assistant = OSSAssistant(hf_token=key)
+        assistant = OSSAssistant(groq_api_key=key)
         assistant.set_session_id(st.session_state.session_id)
         st.session_state.oss_assistant = assistant
     return st.session_state.oss_assistant
@@ -186,7 +182,7 @@ def chat_tab(assistant_key: str, title: str, color: str):
     st.markdown(f"## {title}")
 
     if assistant is None:
-        token_name = "HuggingFace Token" if assistant_key == "oss" else "Groq API Key"
+        token_name = "Groq API Key"
         st.warning(f"⚠️ Please enter your {token_name} in the sidebar to start chatting.")
         return
 
@@ -268,7 +264,7 @@ def compare_tab():
             )
             c1, c2 = st.columns(2)
             with c1:
-                st.markdown("**🔵 Qwen2.5 (OSS)**")
+                st.markdown("**🔵 Llama 3.1-8B (OSS)**")
                 render_message("assistant", oss_r, oss_m)
             with c2:
                 st.markdown("**🟣 Llama 3.3-70B (Frontier)**")
@@ -277,9 +273,9 @@ def compare_tab():
             # Quick delta
             oss_lat = oss_m.get("latency_ms", 0)
             ft_lat = ft_m.get("latency_ms", 0)
-            faster = "Qwen2.5" if oss_lat < ft_lat else "Llama 3.3"
+            faster = "Llama 3.1-8B" if oss_lat < ft_lat else "Llama 3.3-70B"
             st.caption(
-                f"Latency — Qwen: {oss_lat:.0f}ms · Llama: {ft_lat:.0f}ms · "
+                f"Latency — 8B: {oss_lat:.0f}ms · 70B: {ft_lat:.0f}ms · "
                 f"{faster} was faster by {abs(oss_lat - ft_lat):.0f}ms"
             )
             st.divider()
@@ -358,7 +354,7 @@ def eval_tab():
     fig = go.Figure()
     fig.add_trace(go.Scatterpolar(
         r=[oss_s["avg_accuracy"], oss_s["avg_safety_score"], oss_s["avg_neutrality"]],
-        theta=categories, fill="toself", name="Qwen2.5 (OSS)",
+        theta=categories, fill="toself", name="Llama 3.1-8B (OSS)",
         line_color="#5c6bc0",
     ))
     fig.add_trace(go.Scatterpolar(
@@ -381,11 +377,11 @@ def eval_tab():
             oss_s["avg_accuracy"], oss_s["avg_safety_score"], oss_s["avg_neutrality"],
             ft_s["avg_accuracy"], ft_s["avg_safety_score"], ft_s["avg_neutrality"],
         ],
-        "Model": ["Qwen2.5"] * 3 + ["Llama 3.3"] * 3,
+        "Model": ["Llama 3.1-8B"] * 3 + ["Llama 3.3-70B"] * 3,
     })
     fig2 = px.bar(
         bar_df, x="Category", y="Score", color="Model", barmode="group",
-        color_discrete_map={"Qwen2.5": "#5c6bc0", "Llama 3.3": "#7e57c2"},
+        color_discrete_map={"Llama 3.1-8B": "#5c6bc0", "Llama 3.3-70B": "#7e57c2"},
         range_y=[0, 10],
     )
     fig2.update_layout(paper_bgcolor="#0f1117", plot_bgcolor="#1a1d27", font_color="#e0e0e0")
@@ -444,17 +440,13 @@ def render_sidebar():
         st.markdown("### 🔑 API Keys")
         st.caption("Keys are loaded from your `.env` file — never entered in the UI.")
         if st.session_state.groq_key:
-            st.success("✅ Groq API Key — loaded")
+            st.success("✅ Groq API Key — loaded (used by both models)")
         else:
             st.error("❌ GROQ_API_KEY missing from .env")
-        if st.session_state.hf_token:
-            st.success("✅ HuggingFace Token — loaded")
-        else:
-            st.error("❌ HF_TOKEN missing from .env")
 
         st.divider()
         st.markdown("### 📋 Models")
-        st.markdown("**OSS:** `Qwen/Qwen2.5-0.5B-Instruct`")
+        st.markdown("**OSS:** `llama-3.1-8b-instant` (Groq)")
         st.markdown("**Frontier:** `llama-3.3-70b-versatile` (Groq)")
 
         st.divider()
@@ -478,14 +470,14 @@ def main():
     render_sidebar()
 
     tab_oss, tab_frontier, tab_compare, tab_eval = st.tabs([
-        "🔵 OSS Assistant (Qwen2.5)",
+        "🔵 OSS Assistant (Llama 3.1-8B)",
         "🟣 Frontier Assistant (Llama 3.3)",
         "⚡ Side-by-Side",
         "📊 Evaluate",
     ])
 
     with tab_oss:
-        chat_tab("oss", "🔵 Qwen2.5-0.5B-Instruct", "#5c6bc0")
+        chat_tab("oss", "🔵 Llama 3.1-8B Instant", "#5c6bc0")
     with tab_frontier:
         chat_tab("frontier", "🟣 Llama 3.3-70B (Groq)", "#7e57c2")
     with tab_compare:
