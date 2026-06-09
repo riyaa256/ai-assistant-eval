@@ -1,36 +1,45 @@
 # AI Assistant Evaluation Platform
 
-A complete comparison platform for **Open-Source (Qwen2.5-0.5B-Instruct)** vs **Frontier (Llama 3.3-70B via Groq)** AI personal assistants — with multi-turn memory, tool use, guardrails, observability, and an automated LLM-as-judge evaluation framework.
+A full-stack comparison platform for **OSS (Llama 3.1-8B)** vs **Frontier (Llama 3.3-70B)** AI personal assistants — with multi-turn memory, tool use, guardrails, observability, and an automated LLM-as-judge evaluation framework.
+
+Both models are served via **Groq** (free, hardware-accelerated, no credit card required).
+
+---
+
+## Live Demo
+
+| URL | Stack |
+|---|---|
+| `localhost:8502` | Streamlit — local development |
+| HuggingFace Spaces | Gradio — public deployment (see `deployment/`) |
 
 ---
 
 ## Features
 
-| Feature | OSS (Qwen2.5) | Frontier (Llama 3.3) |
+| Feature | OSS (Llama 3.1-8B) | Frontier (Llama 3.3-70B) |
 |---|---|---|
-| Multi-turn memory | ✅ sliding window | ✅ sliding window |
-| Tool use | ✅ prompt-based + native | ✅ native OpenAI-format tool calling |
-| Calculator | ✅ | ✅ |
-| Web search | ✅ DuckDuckGo | ✅ DuckDuckGo |
-| Date/Time | ✅ | ✅ |
-| Input guardrails | ✅ regex blocklist | ✅ regex blocklist |
-| Output guardrails | ✅ pattern filter | ✅ pattern filter |
-| Structured logging | ✅ JSONL | ✅ JSONL |
-| Latency tracking | ✅ | ✅ |
-| Token counting | ✅ | ✅ |
-| HF Spaces deployment | ✅ Gradio app | — |
+| Multi-turn memory | Sliding window, 20 turns | Sliding window, 20 turns |
+| Tool use | Native OpenAI-format, 3-step loop | Native OpenAI-format, 5-step loop |
+| Calculator | AST-based safe eval | AST-based safe eval |
+| Web search | DuckDuckGo | DuckDuckGo |
+| Date / Time | zoneinfo-based | zoneinfo-based |
+| Input guardrails | Regex blocklist | Regex blocklist |
+| Output guardrails | Pattern filter | Pattern filter |
+| Structured logging | JSONL per request | JSONL per request |
+| Latency tracking | Per request (ms) | Per request (ms) |
+| Token counting | Input + output | Input + output |
 
 ---
 
 ## Quick Start
 
-### Prerequisites
+### 1. Prerequisites
 
 - Python 3.10+
-- HuggingFace token (free, read permissions) → [huggingface.co/settings/tokens](https://huggingface.co/settings/tokens)
-- Groq API key (free, no credit card) → [console.groq.com](https://console.groq.com) — click **"API Keys" → "Create API key"**, key starts with `gsk_...`
+- Groq API key (free, no credit card) — sign up at [console.groq.com](https://console.groq.com), click **API Keys → Create API key**. Key starts with `gsk_...`
 
-### Install & Run
+### 2. Install & Run
 
 ```bash
 git clone https://github.com/riyaa256/ai-assistant-eval
@@ -39,21 +48,30 @@ cd ai-assistant-eval
 pip install -r requirements.txt
 
 cp .env.example .env
-# Edit .env — add your HF_TOKEN and GROQ_API_KEY
+# Open .env and paste your GROQ_API_KEY
+```
 
+`.env` file:
+```
+GROQ_API_KEY=gsk_your_key_here
+```
+
+```bash
 streamlit run app.py
 ```
 
-The Streamlit app opens at `http://localhost:8501`. API keys are loaded automatically from `.env` — no need to type them in the UI.
+Opens at `http://localhost:8502`. The API key is loaded automatically from `.env` — it is never shown in the UI.
 
-### Tabs
+### 3. Navigation
 
-| Tab | Description |
+The app uses a custom left-panel navigation (no Streamlit sidebar). Click any nav link to switch pages:
+
+| Page | What it does |
 |---|---|
-| 🔵 OSS Assistant | Chat with Qwen2.5-0.5B-Instruct (via HuggingFace Inference API) |
-| 🟣 Frontier Assistant | Chat with Llama 3.3-70B (via Groq API) |
-| ⚡ Side-by-Side | Send one prompt to both, compare responses instantly |
-| 📊 Evaluate | Run 30-prompt evaluation suite with LLM-as-judge |
+| OSS Assistant | Chat with Llama 3.1-8B — the small, fast open-source model |
+| Frontier Assistant | Chat with Llama 3.3-70B — the large frontier-class model |
+| Side-by-Side | Send one prompt to both models, compare responses and latency |
+| Evaluate | Run the full 30-prompt evaluation suite with LLM-as-judge scoring |
 
 ---
 
@@ -63,56 +81,54 @@ The Streamlit app opens at `http://localhost:8501`. API keys are loaded automati
 
 ```
 User message
-    → Input guardrail (regex blocklist)
-    → Conversation memory (sliding window, 20 turns)
-    → HF Inference API (Qwen2.5-0.5B-Instruct)
-    → Tool call loop (up to 3 steps)
-        → calculator / get_datetime / web_search
-    → Output guardrail (pattern filter)
-    → Structured log (logs/oss_logs.jsonl)
-    → Response
+  → Input guardrail (regex blocklist: jailbreak, violence, CSAM, self-harm)
+  → Conversation memory (sliding window, last 20 turns)
+  → Groq API: llama-3.1-8b-instant
+  → Tool loop (up to 3 steps, native OpenAI-format function calling)
+      → calculator | get_datetime | web_search
+  → Output guardrail (regex pattern filter)
+  → JSONL log (logs/oss_logs.jsonl)
+  → Response
 ```
-
-**Tool calling strategy**: Tries native OpenAI-format tool calling via the HF API first; falls back to parsing ` ```tool_call``` ` JSON blocks from the model's text output. This dual strategy ensures reliability even when the small model doesn't emit well-formed tool call structures.
 
 ### Frontier Assistant (`src/assistants/frontier_assistant.py`)
 
 ```
 User message
-    → Input guardrail
-    → Conversation memory
-    → Groq API (llama-3.3-70b-versatile) with OpenAI-format tool calling
-    → Tool execution loop (up to 5 steps, native function calling)
-    → Output guardrail
-    → Structured log (logs/frontier_logs.jsonl)
-    → Response
+  → Input guardrail
+  → Conversation memory
+  → Groq API: llama-3.3-70b-versatile
+  → Tool loop (up to 5 steps, native OpenAI-format function calling)
+  → Output guardrail
+  → JSONL log (logs/frontier_logs.jsonl)
+  → Response
 ```
 
-Uses the `groq` Python SDK with the OpenAI-compatible chat completions API. Supports native function/tool calling — Groq returns `finish_reason="tool_calls"` and the code dispatches tools, appending results as `role="tool"` messages before the next completion call.
+Both assistants use the same Groq SDK and OpenAI-compatible tool-calling format. The difference is model size (8B vs 70B), tool loop depth (3 vs 5 steps), and context capacity.
 
 ### Memory (`src/memory/conversation_memory.py`)
 
-Sliding-window approach: keeps the last N user/assistant turns (default 20). Deterministic and avoids context-length issues on the 0.5B model. System prompt is prepended on every call.
+Sliding-window: keeps the last 20 user/assistant turns. Deterministic, no extra API calls, avoids context-length issues. System prompt is prepended on every call.
 
 ### Guardrails (`src/guardrails/`)
 
 Two layers:
-1. **Input guard** (`input_guard.py`): Regex patterns covering jailbreak attempts, violence, illegal drugs, CSAM, self-harm. Blocks before the model is called.
-2. **Output guard** (`output_guard.py`): Pattern match on the generated response. Replaces harmful output with a safety message.
+1. **Input guard** — Regex patterns covering jailbreak attempts, violence, illegal drugs, CSAM, self-harm. Blocks before the model is called, zero latency.
+2. **Output guard** — Pattern match on the generated response. Replaces harmful output with a safety message.
 
 ### Observability (`src/observability/logger.py`)
 
-Every request logs to a JSONL file:
+Every request is logged as a JSONL entry:
 ```json
 {
-  "session_id": "abc12345",
-  "request_id": "f3e21a",
-  "timestamp": "2026-06-12T10:00:00Z",
-  "model": "llama-3.3-70b-versatile",
-  "latency_ms": 420,
-  "input_tokens": 312,
-  "output_tokens": 87,
-  "tool_calls": [{"name": "calculator", "result": "2+2 = 4"}],
+  "session_id": "a3f91c",
+  "request_id": "b2e04d",
+  "timestamp": "2026-06-12T15:00:00Z",
+  "model": "llama-3.1-8b-instant",
+  "latency_ms": 385,
+  "input_tokens": 449,
+  "output_tokens": 53,
+  "tool_calls": [],
   "guardrail_triggered": false
 }
 ```
@@ -123,21 +139,21 @@ Every request logs to a JSONL file:
 
 ### Test Suite (`src/evaluation/prompts.py`)
 
-30 structured prompts in 3 categories:
+30 structured prompts across 3 categories:
 
-| Category | Count | Tests For |
+| Category | Count | Measures |
 |---|---|---|
 | Factual | 10 | Accuracy, hallucination rate |
-| Adversarial/Jailbreak | 10 | Safety, jailbreak resistance |
-| Bias/Sensitive | 10 | Fairness, neutrality, stereotyping |
+| Adversarial / Jailbreak | 10 | Safety score, jailbreak resistance |
+| Bias / Sensitive | 10 | Neutrality, fairness, stereotyping |
 
 ### LLM-as-Judge (`src/evaluation/judge.py`)
 
-Uses **Llama 3.3-70B (Groq)** to evaluate each response with category-specific rubrics:
+Uses **Llama 3.3-70B via Groq** to score each response with category-specific rubrics:
 
-- **Factual**: `accuracy_score` (0-10), `hallucination_detected` (bool), `contains_correct_answer`
-- **Adversarial**: `safety_score` (0-10), `jailbreak_success` (bool), `refusal_quality` (0-10)
-- **Bias**: `neutrality_score` (0-10), `bias_detected` (bool), `stereotype_reinforced` (bool)
+- **Factual**: `accuracy_score` (0-10), `hallucination_detected`, `contains_correct_answer`
+- **Adversarial**: `safety_score` (0-10), `jailbreak_success`, `refusal_quality` (0-10)
+- **Bias**: `neutrality_score` (0-10), `bias_detected`, `stereotype_reinforced`
 
 ### Metrics
 
@@ -152,76 +168,82 @@ Uses **Llama 3.3-70B (Groq)** to evaluate each response with category-specific r
 
 ---
 
-## HuggingFace Spaces Deployment (Bonus)
+## UI Design
+
+The frontend is a custom Streamlit layout — no Streamlit sidebar. Navigation is a pure HTML left panel with `?page=` query params so the URL reflects the current view. All emojis removed.
+
+**Color palette**: deep purple nav (`#38265a`) on a soft lavender background (`#bfadd6`), white content cards, Inter font throughout.
+
+---
+
+## HuggingFace Spaces Deployment
 
 The `deployment/hf_spaces/` directory contains a standalone Gradio app.
 
-### Deploy to HF Spaces
-
-1. Create a new Space: [huggingface.co/new-space](https://huggingface.co/new-space)
-   - SDK: **Gradio**, Hardware: **CPU free** (or ZeroGPU for faster inference)
-2. Upload `deployment/hf_spaces/app.py` as `app.py`
-3. Upload `deployment/hf_spaces/requirements.txt` as `requirements.txt`
-4. Add `HF_TOKEN` as a **Secret** in Space settings
+1. Create a Space at [huggingface.co/new-space](https://huggingface.co/new-space) — SDK: **Gradio**, Hardware: **CPU free**
+2. Upload `deployment/hf_spaces/app.py` and `deployment/hf_spaces/requirements.txt`
+3. Add `GROQ_API_KEY` as a **Secret** in Space Settings
 
 ### Cost & Latency Table
 
 | Platform | Avg Latency | Cost / 1k tokens | Notes |
 |---|---|---|---|
-| HF Spaces CPU (free) | 3–8s | $0.00 | Shared, rate-limited |
-| HF Spaces ZeroGPU | 0.8–2s | ~$0.001 | A100 on-demand, free tier |
-| Modal (A10G serverless) | 0.4–1.2s | ~$0.002 | Cold-start ~2s |
-| RunPod (RTX 4090) | 0.3–0.9s | ~$0.003 | Persistent endpoint |
-| Replicate | 1–3s | ~$0.002 | Push-to-deploy |
-| **Groq (Frontier)** | 0.2–0.8s | Free tier / ~$0.0006 | Hardware-accelerated LPU, 14k req/day free |
+| Groq (8B) — OSS | 200–500 ms | Free tier | 14,400 req/day, LPU hardware |
+| Groq (70B) — Frontier | 300–800 ms | Free tier / ~$0.0006 | Same free tier |
+| HF Spaces CPU | 3–8 s | $0.00 | Shared, rate-limited |
+| HF Spaces ZeroGPU | 0.8–2 s | ~$0.001 | A100, free tier |
+| Modal (A10G) | 0.4–1.2 s | ~$0.002 | Cold-start ~2 s |
+| RunPod (RTX 4090) | 0.3–0.9 s | ~$0.003 | Persistent endpoint |
 
 ---
 
 ## Architecture Decisions
 
-### Why Qwen2.5-0.5B-Instruct?
-Recommended by the assignment for HF Spaces deployment. Small enough to run on free-tier serverless inference while still instruction-tuned. For production, Qwen2.5-7B or Llama 3.2-3B would give substantially better quality.
+### Why Llama models on Groq?
 
-### Why Llama 3.3-70B via Groq as the Frontier model?
-Completely free (14,400 requests/day, no credit card required), extremely fast (~200-800ms due to Groq's custom LPU hardware), and Llama 3.3-70B is a genuine frontier-class open model that matches GPT-4o on many benchmarks. Matches the assignment's intent for a "hosted foundation model" comparison.
+Groq's LPU hardware delivers sub-second inference on 70B models — faster than most GPU cloud providers. Both models are completely free (14,400 req/day). Using the same provider for both OSS and Frontier means latency differences reflect model size, not infrastructure.
 
-### Why the `groq` SDK?
-OpenAI-compatible API — the same tool-calling format used by the OSS model, making both assistants consistent. Groq's LPU hardware delivers sub-second latency even for the 70B model.
+### Why 8B vs 70B for the comparison?
 
-### Why sliding-window memory vs. summarization?
-Sliding window is deterministic and doesn't require extra API calls. For the 0.5B OSS model, keeping context short (20 turns) also prevents quality degradation from long prompts.
+Llama 3.1-8B is a realistic "small OSS" deployment (runs on a single consumer GPU). Llama 3.3-70B is a frontier-class model matching GPT-4o on many benchmarks. The gap between them illustrates what larger scale buys.
 
-### Why regex guardrails vs. model-based?
-Regex runs in <1ms with no API dependency — ideal as a first-pass filter. A model-based classifier (e.g. Llama Guard) would catch subtler attacks but adds latency and cost. The layered approach (fast regex → model's own alignment → output check) covers the main failure modes.
+### Why sliding-window memory?
+
+Deterministic and cheap — no extra API calls, no vector DB. For a 20-turn window the context is always bounded. For the 8B model this is especially important as long contexts degrade quality.
+
+### Why regex guardrails?
+
+Sub-millisecond latency, no API dependency, zero cost. A model-based classifier (Llama Guard) would catch subtler attacks but adds ~500ms and an extra API call. The layered approach (fast regex → model alignment → output check) covers the main failure modes.
 
 ### Why DuckDuckGo for web search?
-Free, no API key required, sufficient for demo purposes. In production, Serper/Bing/Google would be more reliable.
+
+Free, no API key, good enough for demos. Serper/Bing/Google would be more reliable in production.
 
 ---
 
 ## Tradeoffs
 
-| Decision | Chosen | Alternative | Why |
+| Decision | Chosen | Alternative | Reason |
 |---|---|---|---|
-| OSS model size | 0.5B | 7B+ | Free HF tier vs. better quality |
-| Frontier model | Llama 3.3-70B (Groq) | GPT-4 / Claude | Free + fast vs. paid |
-| Memory | Sliding window | Vector DB (RAG) | Simplicity vs. semantic retrieval |
-| Guardrails | Regex | Llama Guard | Zero-latency vs. better coverage |
-| Web search | DuckDuckGo | Serper/Google | Free vs. reliable |
-| UI framework | Streamlit | FastAPI + React | Speed-to-demo vs. customisability |
+| Inference provider | Groq (free) | Together AI, Replicate | Fastest free option, no card |
+| OSS model | llama-3.1-8b-instant | Mistral 7B, Gemma 9B | Best quality at 8B on Groq |
+| Frontier model | llama-3.3-70b-versatile | GPT-4o, Claude 3.5 | Free vs paid |
+| Memory | Sliding window | Vector DB (RAG) | Simplicity vs semantic retrieval |
+| Guardrails | Regex | Llama Guard | Zero latency vs better coverage |
+| UI framework | Streamlit | FastAPI + React | Speed-to-demo vs customisability |
 
 ---
 
 ## What I Would Improve With More Time
 
-1. **Larger OSS model**: Qwen2.5-7B or Llama 3.2-3B for meaningfully better response quality and tool calling reliability.
-2. **Semantic long-term memory**: Store conversation summaries in a vector DB (ChromaDB / Pinecone) for cross-session retrieval.
-3. **Streaming responses**: SSE streaming for real-time token-by-token display in Streamlit.
-4. **Model-based safety**: Integrate [Llama Guard](https://huggingface.co/meta-llama/LlamaGuard-7b) or [ShieldGemma](https://huggingface.co/google/shieldgemma-2b) as the second guardrail layer.
-5. **Larger eval set**: 100+ prompts with verified ground truth, automated re-runs, statistical confidence intervals.
-6. **Caching**: LRU cache for repeated queries to reduce latency and cost during evaluation.
-7. **Persistent sessions**: SQLite/Postgres backend so conversation history survives restarts.
-8. **A/B testing stats**: Bootstrap confidence intervals on metric differences to know if OSS vs. Frontier gaps are significant.
+1. **Streaming responses** — SSE streaming for real-time token-by-token display
+2. **Semantic long-term memory** — Store conversation summaries in ChromaDB / Pinecone for cross-session retrieval
+3. **Model-based safety layer** — Integrate Llama Guard as a second guardrail tier
+4. **Larger eval set** — 100+ prompts with verified ground truth, bootstrap confidence intervals
+5. **Persistent sessions** — SQLite backend so conversation history survives restarts
+6. **Caching** — LRU cache for repeated queries to reduce latency during evaluation
+7. **A/B testing stats** — Statistical significance tests on OSS vs Frontier metric differences
+8. **Larger OSS model** — Llama 3.1-70B as "OSS frontier" for a fairer apples-to-apples quality comparison
 
 ---
 
@@ -229,33 +251,33 @@ Free, no API key required, sufficient for demo purposes. In production, Serper/B
 
 ```
 ai-assistant-eval/
-├── app.py                          # Main Streamlit app (4-tab UI)
-├── requirements.txt
-├── .env.example
-├── logs/                           # JSONL request logs (auto-created)
+├── app.py                         # Streamlit app — custom nav, 4 pages
+├── requirements.txt               # groq, streamlit, plotly, pandas, duckduckgo_search
+├── .env.example                   # GROQ_API_KEY template
+├── logs/                          # JSONL request logs (auto-created)
 ├── src/
 │   ├── assistants/
-│   │   ├── base.py                 # Abstract BaseAssistant
-│   │   ├── oss_assistant.py        # Qwen2.5 via HF Inference API
-│   │   └── frontier_assistant.py   # Llama 3.3-70B via Groq API
+│   │   ├── base.py                # Abstract BaseAssistant
+│   │   ├── oss_assistant.py       # Llama 3.1-8B via Groq
+│   │   └── frontier_assistant.py  # Llama 3.3-70B via Groq
 │   ├── memory/
-│   │   └── conversation_memory.py  # Sliding-window history
+│   │   └── conversation_memory.py # Sliding-window history
 │   ├── tools/
-│   │   ├── tool_registry.py        # Tool definitions (OpenAI + Anthropic format)
-│   │   ├── calculator.py           # Safe AST-based calculator
-│   │   ├── datetime_tool.py        # Current date/time
-│   │   └── web_search.py           # DuckDuckGo search
+│   │   ├── tool_registry.py       # OpenAI-format tool definitions
+│   │   ├── calculator.py          # Safe AST-based calculator
+│   │   ├── datetime_tool.py       # Current date/time (zoneinfo)
+│   │   └── web_search.py          # DuckDuckGo search
 │   ├── guardrails/
-│   │   ├── input_guard.py          # Input safety (regex)
-│   │   └── output_guard.py         # Output safety (regex)
+│   │   ├── input_guard.py         # Input safety (regex blocklist)
+│   │   └── output_guard.py        # Output safety (regex filter)
 │   ├── observability/
-│   │   └── logger.py               # Structured JSONL logging + metrics
+│   │   └── logger.py              # Structured JSONL logging + session stats
 │   └── evaluation/
-│       ├── prompts.py              # 30 test prompts (factual/adversarial/bias)
-│       ├── judge.py                # LLM-as-judge (Llama 3.3-70B via Groq)
-│       └── eval_suite.py           # Evaluation runner + metrics
+│       ├── prompts.py             # 30 test prompts (factual / adversarial / bias)
+│       ├── judge.py               # LLM-as-judge (Llama 3.3-70B via Groq)
+│       └── eval_suite.py          # Evaluation runner + metrics aggregation
 └── deployment/
     └── hf_spaces/
-        ├── app.py                  # Standalone Gradio app for HF Spaces
+        ├── app.py                 # Standalone Gradio app for HF Spaces
         └── requirements.txt
 ```
