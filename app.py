@@ -10,6 +10,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 import streamlit as st
+import streamlit.components.v1 as components
 
 st.set_page_config(
     page_title="AI Eval Platform",
@@ -34,114 +35,18 @@ st.markdown("""
 
 .block-container { padding: 16px !important; max-width: 100% !important; }
 
-/* ── Nav panel (pure HTML div — no column CSS needed) ── */
-.nav-panel {
-    background: #38265a;
-    border-radius: 20px;
-    padding: 28px 18px 24px;
-    min-height: calc(100vh - 48px);
-    display: flex;
-    flex-direction: column;
-    gap: 0;
-}
-
-.nav-logo {
-    font-size: 22px;
-    font-weight: 700;
-    color: #ffffff;
-    letter-spacing: -0.5px;
-    margin-bottom: 22px;
-    line-height: 1;
-}
-.nav-logo span { color: #9b6fd4; }
-
-.nav-status-box {
-    background: rgba(255,255,255,0.1);
-    border-radius: 12px;
-    padding: 12px 14px;
-    margin-bottom: 4px;
-}
-.nav-status-label {
-    font-size: 10px;
-    font-weight: 700;
-    color: rgba(255,255,255,0.4);
-    letter-spacing: 1.2px;
-    text-transform: uppercase;
-    margin-bottom: 7px;
-}
-.nav-status-value {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    font-size: 13px;
-    color: rgba(255,255,255,0.88);
-    font-weight: 500;
-}
-.nav-dot {
-    width: 8px;
-    height: 8px;
-    border-radius: 50%;
-    flex-shrink: 0;
-    display: inline-block;
-}
-
-.nav-divider {
-    height: 1px;
-    background: rgba(255,255,255,0.1);
-    margin: 16px 0;
-}
-.nav-section {
-    font-size: 10px;
-    font-weight: 700;
-    color: rgba(255,255,255,0.3);
-    letter-spacing: 1.3px;
-    text-transform: uppercase;
-    padding: 0 4px;
-    margin-bottom: 8px;
-}
-
-/* Nav links */
-a.nav-item {
-    display: block;
-    color: rgba(255,255,255,0.6);
-    text-decoration: none !important;
-    padding: 10px 14px;
-    border-radius: 10px;
-    font-size: 13.5px;
-    font-weight: 500;
-    margin-bottom: 3px;
-    transition: background 0.15s, color 0.15s;
-    letter-spacing: 0.1px;
-}
-a.nav-item:hover {
-    background: rgba(255,255,255,0.1);
-    color: #ffffff;
-    text-decoration: none !important;
-}
-a.nav-item.active {
-    background: rgba(255,255,255,0.16);
-    color: #ffffff;
-    font-weight: 600;
-}
-
-.nav-footer {
-    font-size: 11px;
-    color: rgba(255,255,255,0.28);
-    line-height: 2;
-    margin-top: auto;
-    padding-top: 4px;
-}
-.nav-footer b {
-    color: rgba(255,255,255,0.5);
-    font-size: 10.5px;
-    text-transform: uppercase;
-    letter-spacing: 0.8px;
-}
-
-/* ── First column: remove padding so nav-panel fills edge-to-edge ── */
+/* ── Nav column: remove padding so iframe fills cleanly ── */
 [data-testid="column"]:first-child,
 [data-testid="stColumn"]:first-child {
-    padding: 0 8px 0 0 !important;
+    padding: 0 6px 0 0 !important;
+    min-height: 0 !important;
+}
+/* Remove iframe border & scrollbar */
+[data-testid="column"]:first-child iframe,
+[data-testid="stColumn"]:first-child iframe {
+    border: none !important;
+    border-radius: 20px !important;
+    display: block !important;
 }
 
 /* ── Buttons ── */
@@ -389,49 +294,80 @@ NAV_PAGES = [
 def render_nav(active: str):
     api_ok = bool(st.session_state.groq_key)
     dot_color = "#6edd7a" if api_ok else "#f08080"
-    dot_shadow = "rgba(110,221,122,0.5)" if api_ok else "rgba(240,128,128,0.5)"
-    status_text = "Groq connected" if api_ok else "No API key — check .env"
+    dot_glow  = "rgba(110,221,122,0.55)" if api_ok else "rgba(240,128,128,0.55)"
+    status_text = "Groq connected" if api_ok else "No API key"
 
-    # Build nav link HTML (no JS event handlers — pure CSS :hover)
-    links = ""
+    links_html = ""
     for page_id, label in NAV_PAGES:
-        css_class = "nav-item active" if active == page_id else "nav-item"
-        arrow = "&#9656;&nbsp;&nbsp;" if active == page_id else "&nbsp;&nbsp;&nbsp;&nbsp;"
-        links += f'<a href="?page={page_id}" class="{css_class}">{arrow}{label}</a>\n'
+        is_active = active == page_id
+        cls = "nav-item active" if is_active else "nav-item"
+        arrow = "&#9656;&#160;&#160;" if is_active else "&#160;&#160;&#160;&#160;"
+        links_html += f'<a href="?page={page_id}" class="{cls}">{arrow}{label}</a>\n'
 
-    st.markdown(f"""
-<div class="nav-panel">
-    <div class="nav-logo">Eval<span>Lab</span></div>
+    html = f"""<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<base target="_top">
+<style>
+  * {{ margin:0; padding:0; box-sizing:border-box; font-family:-apple-system,'Inter',sans-serif; }}
+  html, body {{ height:100%; background:#38265a; }}
+  body {{ padding:28px 18px 24px; display:flex; flex-direction:column; }}
 
-    <div class="nav-status-box">
-        <div class="nav-status-label">API Status</div>
-        <div class="nav-status-value">
-            <span class="nav-dot"
-                  style="background:{dot_color};box-shadow:0 0 6px {dot_shadow};">
-            </span>
-            {status_text}
-        </div>
+  .logo {{ font-size:22px; font-weight:700; color:#fff; letter-spacing:-0.5px; margin-bottom:22px; }}
+  .logo span {{ color:#9b6fd4; }}
+
+  .status-box {{ background:rgba(255,255,255,0.1); border-radius:12px; padding:12px 14px; margin-bottom:16px; }}
+  .status-lbl {{ font-size:10px; font-weight:700; color:rgba(255,255,255,0.4); letter-spacing:1.2px; text-transform:uppercase; margin-bottom:7px; }}
+  .status-val {{ display:flex; align-items:center; gap:8px; font-size:13px; color:rgba(255,255,255,0.9); font-weight:500; }}
+  .dot {{ width:8px; height:8px; border-radius:50%; background:{dot_color}; box-shadow:0 0 6px {dot_glow}; flex-shrink:0; }}
+
+  .divider {{ height:1px; background:rgba(255,255,255,0.1); margin:0 0 14px; }}
+  .section {{ font-size:10px; font-weight:700; color:rgba(255,255,255,0.3); letter-spacing:1.3px; text-transform:uppercase; margin-bottom:8px; padding:0 4px; }}
+
+  a.nav-item {{
+    display:block; color:rgba(255,255,255,0.6); text-decoration:none;
+    padding:10px 14px; border-radius:10px; font-size:13.5px; font-weight:500;
+    margin-bottom:3px; transition:background 0.15s,color 0.15s; letter-spacing:0.1px;
+  }}
+  a.nav-item:hover {{ background:rgba(255,255,255,0.1); color:#fff; }}
+  a.nav-item.active {{ background:rgba(255,255,255,0.16); color:#fff; font-weight:600; }}
+
+  .footer {{ font-size:11px; color:rgba(255,255,255,0.28); line-height:1.9; margin-top:auto; padding-top:8px; }}
+  .footer b {{ display:block; color:rgba(255,255,255,0.48); font-size:10px; text-transform:uppercase; letter-spacing:0.8px; margin-top:10px; }}
+  .footer b:first-child {{ margin-top:0; }}
+</style>
+</head>
+<body>
+  <div class="logo">Eval<span>Lab</span></div>
+
+  <div class="status-box">
+    <div class="status-lbl">API Status</div>
+    <div class="status-val">
+      <span class="dot"></span>
+      {status_text}
     </div>
+  </div>
 
-    <div class="nav-divider"></div>
-    <div class="nav-section">Navigation</div>
-    {links}
-    <div class="nav-divider" style="margin-top:18px;"></div>
+  <div class="divider"></div>
+  <div class="section">Navigation</div>
+  {links_html}
+  <div class="divider" style="margin-top:18px;"></div>
 
-    <div class="nav-footer">
-        <b>Models</b><br>
-        OSS &nbsp;·&nbsp; llama-3.1-8b-instant<br>
-        Frontier &nbsp;·&nbsp; llama-3.3-70b<br>
-        <br>
-        <b>Tools</b><br>
-        Calculator &nbsp;·&nbsp; DateTime &nbsp;·&nbsp; Web Search<br>
-        <br>
-        <b>Safety</b><br>
-        Input + output guardrails<br>
-        JSONL observability logging
-    </div>
-</div>
-""", unsafe_allow_html=True)
+  <div class="footer">
+    <b>Models</b>
+    OSS &middot; llama-3.1-8b-instant<br>
+    Frontier &middot; llama-3.3-70b
+    <b>Tools</b>
+    Calculator &middot; DateTime &middot; Web Search
+    <b>Safety</b>
+    Input + output guardrails<br>
+    JSONL observability logging
+  </div>
+</body>
+</html>"""
+
+    components.html(html, height=700, scrolling=False)
 
 
 # ── Pages ──────────────────────────────────────────────────────────────────────
