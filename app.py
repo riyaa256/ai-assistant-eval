@@ -22,7 +22,6 @@ st.markdown("""
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
 
-/* Hide Streamlit chrome */
 [data-testid="stSidebar"],
 [data-testid="collapsedControl"],
 [data-testid="stHeader"],
@@ -30,51 +29,138 @@ st.markdown("""
 
 * { font-family: 'Inter', sans-serif !important; box-sizing: border-box; }
 
-/* ── App background ── */
 [data-testid="stAppViewContainer"],
 [data-testid="stMain"] { background: #bfadd6 !important; }
 
-.block-container {
-    padding: 16px !important;
-    max-width: 100% !important;
+.block-container { padding: 16px !important; max-width: 100% !important; }
+
+/* ── Nav panel (pure HTML div — no column CSS needed) ── */
+.nav-panel {
+    background: #38265a;
+    border-radius: 20px;
+    padding: 28px 18px 24px;
+    min-height: calc(100vh - 48px);
+    display: flex;
+    flex-direction: column;
+    gap: 0;
 }
 
-/* ── NAV column ── */
-[data-testid="stHorizontalBlock"] > [data-testid="column"]:first-child,
-[data-testid="stColumns"] > [data-testid="stColumn"]:first-child {
-    background: #38265a !important;
-    border-radius: 20px !important;
-    padding: 28px 18px 24px !important;
-    min-height: calc(100vh - 40px) !important;
+.nav-logo {
+    font-size: 22px;
+    font-weight: 700;
+    color: #ffffff;
+    letter-spacing: -0.5px;
+    margin-bottom: 22px;
+    line-height: 1;
 }
-[data-testid="stHorizontalBlock"] > [data-testid="column"]:first-child > div,
-[data-testid="stColumns"] > [data-testid="stColumn"]:first-child > div {
-    gap: 0 !important;
+.nav-logo span { color: #9b6fd4; }
+
+.nav-status-box {
+    background: rgba(255,255,255,0.1);
+    border-radius: 12px;
+    padding: 12px 14px;
+    margin-bottom: 4px;
+}
+.nav-status-label {
+    font-size: 10px;
+    font-weight: 700;
+    color: rgba(255,255,255,0.4);
+    letter-spacing: 1.2px;
+    text-transform: uppercase;
+    margin-bottom: 7px;
+}
+.nav-status-value {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+    color: rgba(255,255,255,0.88);
+    font-weight: 500;
+}
+.nav-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+    display: inline-block;
 }
 
-/* Remove link underlines globally */
-a { text-decoration: none !important; }
+.nav-divider {
+    height: 1px;
+    background: rgba(255,255,255,0.1);
+    margin: 16px 0;
+}
+.nav-section {
+    font-size: 10px;
+    font-weight: 700;
+    color: rgba(255,255,255,0.3);
+    letter-spacing: 1.3px;
+    text-transform: uppercase;
+    padding: 0 4px;
+    margin-bottom: 8px;
+}
 
-/* ── ALL buttons — clean light style ── */
+/* Nav links */
+a.nav-item {
+    display: block;
+    color: rgba(255,255,255,0.6);
+    text-decoration: none !important;
+    padding: 10px 14px;
+    border-radius: 10px;
+    font-size: 13.5px;
+    font-weight: 500;
+    margin-bottom: 3px;
+    transition: background 0.15s, color 0.15s;
+    letter-spacing: 0.1px;
+}
+a.nav-item:hover {
+    background: rgba(255,255,255,0.1);
+    color: #ffffff;
+    text-decoration: none !important;
+}
+a.nav-item.active {
+    background: rgba(255,255,255,0.16);
+    color: #ffffff;
+    font-weight: 600;
+}
+
+.nav-footer {
+    font-size: 11px;
+    color: rgba(255,255,255,0.28);
+    line-height: 2;
+    margin-top: auto;
+    padding-top: 4px;
+}
+.nav-footer b {
+    color: rgba(255,255,255,0.5);
+    font-size: 10.5px;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+}
+
+/* ── First column: remove padding so nav-panel fills edge-to-edge ── */
+[data-testid="column"]:first-child,
+[data-testid="stColumn"]:first-child {
+    padding: 0 8px 0 0 !important;
+}
+
+/* ── Buttons ── */
 .stButton > button {
-    background: #e8ddf5 !important;
-    color: #2d1a50 !important;
-    border: 1px solid #cdbde8 !important;
+    background: #ede5f8 !important;
+    color: #2d1050 !important;
+    border: 1px solid #c8b4e8 !important;
     border-radius: 11px !important;
     font-weight: 600 !important;
     font-size: 13px !important;
     padding: 9px 18px !important;
     box-shadow: none !important;
-    transition: all 0.15s ease !important;
-    width: auto !important;
+    transition: all 0.15s !important;
 }
 .stButton > button:hover {
-    background: #dccff0 !important;
-    border-color: #b8a0d8 !important;
-    color: #1a0a38 !important;
+    background: #dfd3f5 !important;
+    border-color: #b09fd4 !important;
 }
 
-/* Primary action buttons (Send, Compare) */
 [data-testid="stFormSubmitButton"] > button {
     background: #5c3d88 !important;
     color: #ffffff !important;
@@ -83,17 +169,10 @@ a { text-decoration: none !important; }
     font-weight: 600 !important;
     font-size: 13px !important;
     padding: 9px 22px !important;
-    box-shadow: 0 3px 10px rgba(70, 30, 130, 0.28) !important;
+    box-shadow: 0 3px 10px rgba(60, 20, 120, 0.28) !important;
 }
 [data-testid="stFormSubmitButton"] > button:hover {
     background: #4d3075 !important;
-    box-shadow: 0 4px 14px rgba(70, 30, 130, 0.38) !important;
-}
-
-/* ── Main column padding ── */
-[data-testid="stHorizontalBlock"] > [data-testid="column"]:nth-child(2),
-[data-testid="stColumns"] > [data-testid="stColumn"]:nth-child(2) {
-    padding: 8px 8px 8px 8px !important;
 }
 
 /* ── Page header ── */
@@ -102,13 +181,13 @@ a { text-decoration: none !important; }
     font-weight: 700;
     color: #1a0a38;
     letter-spacing: -0.7px;
+    margin: 4px 0 6px;
     line-height: 1.2;
-    margin: 4px 0 6px 0;
 }
 .page-subtitle {
     font-size: 13px;
     color: #6b52a0;
-    margin: 0 0 26px 0;
+    margin: 0 0 24px;
     font-weight: 400;
 }
 
@@ -122,12 +201,12 @@ a { text-decoration: none !important; }
     font-size: 14px;
     line-height: 1.6;
     word-break: break-word;
-    box-shadow: 0 3px 12px rgba(70, 30, 130, 0.22);
+    box-shadow: 0 3px 12px rgba(60, 20, 120, 0.22);
 }
 .assistant-bubble {
     background: #ffffff;
     color: #1a0a38;
-    border: 1px solid #d8ccec;
+    border: 1px solid #d4c4ec;
     border-radius: 18px 18px 18px 5px;
     padding: 12px 18px;
     margin: 4px 18% 4px 0;
@@ -135,11 +214,11 @@ a { text-decoration: none !important; }
     line-height: 1.6;
     word-break: break-word;
     white-space: pre-wrap;
-    box-shadow: 0 2px 8px rgba(70, 30, 130, 0.08);
+    box-shadow: 0 2px 8px rgba(60, 20, 120, 0.08);
 }
 .meta-row {
     font-size: 11.5px;
-    color: #9880c0;
+    color: #9878c0;
     margin: 2px 0 14px 4px;
     display: flex;
     align-items: center;
@@ -153,11 +232,11 @@ a { text-decoration: none !important; }
     padding: 2px 10px;
     font-size: 11px;
     font-weight: 500;
-    border: 1px solid #d0c0ec;
+    border: 1px solid #cec0ec;
 }
 .guard-pill {
     background: #fde8e8;
-    color: #a03030;
+    color: #9a2828;
     border-radius: 20px;
     padding: 2px 10px;
     font-size: 11px;
@@ -166,7 +245,7 @@ a { text-decoration: none !important; }
 .card-label {
     font-size: 10.5px;
     font-weight: 700;
-    color: #8060b0;
+    color: #7850a8;
     text-transform: uppercase;
     letter-spacing: 1px;
     margin-bottom: 8px;
@@ -177,7 +256,7 @@ a { text-decoration: none !important; }
 [data-testid="stTextArea"] textarea {
     background: #ffffff !important;
     color: #1a0a38 !important;
-    border: 1.5px solid #c8b8e4 !important;
+    border: 1.5px solid #c4b0e4 !important;
     border-radius: 12px !important;
     font-size: 14px !important;
 }
@@ -194,55 +273,34 @@ a { text-decoration: none !important; }
     background: #ffffff;
     border-radius: 14px;
     padding: 14px 16px;
-    border: 1px solid #d8ccec;
-    box-shadow: 0 2px 8px rgba(70, 30, 130, 0.06);
+    border: 1px solid #d4c4ec;
+    box-shadow: 0 2px 8px rgba(60, 20, 120, 0.06);
 }
-[data-testid="stMetricLabel"] p  { color: #7060a0 !important; font-size: 12px !important; }
-[data-testid="stMetricValue"]    { color: #1a0a38 !important; font-weight: 700 !important; }
+[data-testid="stMetricLabel"] p { color: #6b52a0 !important; font-size: 12px !important; }
+[data-testid="stMetricValue"]   { color: #1a0a38 !important; font-weight: 700 !important; }
 
 /* ── Expander ── */
 [data-testid="stExpander"] {
     background: #f0e8f8 !important;
-    border: 1px solid #d8ccec !important;
+    border: 1px solid #d4c4ec !important;
     border-radius: 14px !important;
 }
-[data-testid="stExpander"] summary {
-    color: #4a2d80 !important;
-    font-weight: 600 !important;
-    font-size: 13px !important;
-}
+[data-testid="stExpander"] summary { color: #4a2d80 !important; font-weight: 600 !important; font-size: 13px !important; }
 
 /* ── Tabs ── */
-[data-baseweb="tab-list"] { background: transparent !important; gap: 4px; }
-[data-baseweb="tab"] {
-    color: #7060a0 !important;
-    font-weight: 500 !important;
-    font-size: 13px !important;
-    border-radius: 8px 8px 0 0 !important;
-    padding: 8px 16px !important;
-}
-[aria-selected="true"][data-baseweb="tab"] {
-    color: #38265a !important;
-    font-weight: 700 !important;
-    border-bottom: 2px solid #5c3d88 !important;
-    background: transparent !important;
-}
+[data-baseweb="tab-list"] { background: transparent !important; }
+[data-baseweb="tab"] { color: #6b52a0 !important; font-weight: 500 !important; font-size: 13px !important; }
+[aria-selected="true"][data-baseweb="tab"] { color: #38265a !important; font-weight: 700 !important; border-bottom: 2px solid #5c3d88 !important; }
 
-/* ── Progress ── */
-[data-testid="stProgressBar"] > div > div {
-    background: linear-gradient(90deg, #5c3d88, #9060c8) !important;
-    border-radius: 6px;
-}
-
-/* ── Misc ── */
+/* ── Progress / misc ── */
+[data-testid="stProgressBar"] > div > div { background: linear-gradient(90deg, #5c3d88, #9060c8) !important; border-radius: 6px; }
 [data-testid="stDataFrame"] { border-radius: 12px !important; }
 [data-testid="stAlert"]     { border-radius: 12px !important; }
-hr { border-color: #d0c0e4 !important; margin: 20px 0 !important; }
-
+hr { border-color: #c8b8e0 !important; margin: 20px 0 !important; }
 [data-testid="stDownloadButton"] > button {
     background: #f0e8f8 !important;
     color: #38265a !important;
-    border: 1px solid #c8b8e4 !important;
+    border: 1px solid #c4b0e4 !important;
     border-radius: 11px !important;
     font-weight: 600 !important;
     box-shadow: none !important;
@@ -255,14 +313,14 @@ hr { border-color: #d0c0e4 !important; margin: 20px 0 !important; }
 
 def init_session():
     defaults = {
-        "session_id":        str(uuid.uuid4())[:8],
-        "oss_messages":      [],
-        "frontier_messages": [],
-        "compare_pairs":     [],
-        "eval_results":      None,
-        "oss_assistant":     None,
-        "frontier_assistant":None,
-        "groq_key":          os.getenv("GROQ_API_KEY", ""),
+        "session_id":         str(uuid.uuid4())[:8],
+        "oss_messages":       [],
+        "frontier_messages":  [],
+        "compare_pairs":      [],
+        "eval_results":       None,
+        "oss_assistant":      None,
+        "frontier_assistant": None,
+        "groq_key":           os.getenv("GROQ_API_KEY", ""),
     }
     for k, v in defaults.items():
         if k not in st.session_state:
@@ -303,119 +361,89 @@ def render_message(role: str, content: str, meta: dict):
         return
     st.markdown(f'<div class="assistant-bubble">{content}</div>', unsafe_allow_html=True)
     parts = []
-    if "latency_ms"    in meta: parts.append(f"{meta['latency_ms']:.0f} ms")
-    if "input_tokens"  in meta: parts.append(f"{meta['input_tokens']} in / {meta['output_tokens']} out")
+    if "latency_ms" in meta:
+        parts.append(f"{meta['latency_ms']:.0f} ms")
+    if "input_tokens" in meta:
+        parts.append(f"{meta['input_tokens']} in / {meta['output_tokens']} out")
     for tc in meta.get("tool_calls") or []:
         parts.append(f'<span class="tool-pill">{tc["name"]}</span>')
-    if meta.get("guardrail_blocked"):  parts.append('<span class="guard-pill">guardrail blocked</span>')
-    if meta.get("output_filtered"):    parts.append('<span class="guard-pill">output filtered</span>')
+    if meta.get("guardrail_blocked"):
+        parts.append('<span class="guard-pill">guardrail blocked</span>')
+    if meta.get("output_filtered"):
+        parts.append('<span class="guard-pill">output filtered</span>')
     if parts:
-        st.markdown(
-            '<div class="meta-row">' +
-            ' <span style="color:#c8b8e0">·</span> '.join(parts) +
-            '</div>',
-            unsafe_allow_html=True,
-        )
+        sep = ' <span style="color:#cbb8e8">·</span> '
+        st.markdown(f'<div class="meta-row">{sep.join(parts)}</div>', unsafe_allow_html=True)
 
 
 # ── Nav ────────────────────────────────────────────────────────────────────────
 
-NAV_ITEMS = [
+NAV_PAGES = [
     ("oss",      "OSS Assistant"),
     ("frontier", "Frontier Assistant"),
     ("compare",  "Side-by-Side"),
     ("evaluate", "Evaluate"),
 ]
 
+
 def render_nav(active: str):
     api_ok = bool(st.session_state.groq_key)
-    dot_c  = "#6edd7a" if api_ok else "#f08080"
-    status = "Groq connected" if api_ok else "No API key — check .env"
+    dot_color = "#6edd7a" if api_ok else "#f08080"
+    dot_shadow = "rgba(110,221,122,0.5)" if api_ok else "rgba(240,128,128,0.5)"
+    status_text = "Groq connected" if api_ok else "No API key — check .env"
 
-    # Build nav link HTML
-    links_html = ""
-    for page_id, label in NAV_ITEMS:
-        is_active = active == page_id
-        if is_active:
-            item_style = (
-                "background:rgba(255,255,255,0.16);"
-                "color:#ffffff;"
-                "font-weight:600;"
-            )
-            prefix = "&#9656;&nbsp;&nbsp;"
-        else:
-            item_style = "color:rgba(255,255,255,0.6);"
-            prefix = "&nbsp;&nbsp;&nbsp;&nbsp;"
-        links_html += f"""
-        <a href="?page={page_id}"
-           style="display:block;{item_style}padding:10px 14px;border-radius:10px;
-                  font-size:13.5px;margin-bottom:3px;letter-spacing:0.1px;
-                  transition:background 0.15s,color 0.15s;"
-           onmouseover="this.style.background='rgba(255,255,255,0.1)';this.style.color='#fff';"
-           onmouseout="this.style.background={'rgba(255,255,255,0.16)' if is_active else 'transparent'};
-                       this.style.color={'#fff' if is_active else 'rgba(255,255,255,0.6)'};">
-            {prefix}{label}
-        </a>"""
+    # Build nav link HTML (no JS event handlers — pure CSS :hover)
+    links = ""
+    for page_id, label in NAV_PAGES:
+        css_class = "nav-item active" if active == page_id else "nav-item"
+        arrow = "&#9656;&nbsp;&nbsp;" if active == page_id else "&nbsp;&nbsp;&nbsp;&nbsp;"
+        links += f'<a href="?page={page_id}" class="{css_class}">{arrow}{label}</a>\n'
 
     st.markdown(f"""
-    <style>a:hover {{text-decoration:none !important;}}</style>
+<div class="nav-panel">
+    <div class="nav-logo">Eval<span>Lab</span></div>
 
-    <!-- Logo -->
-    <div style="font-size:22px;font-weight:700;color:#fff;letter-spacing:-0.5px;margin-bottom:24px;padding-top:2px;">
-        Eval<span style="color:#b898e0;">Lab</span>
-    </div>
-
-    <!-- API Status -->
-    <div style="background:rgba(255,255,255,0.1);border-radius:12px;padding:12px 14px;margin-bottom:6px;">
-        <div style="font-size:10px;color:rgba(255,255,255,0.4);font-weight:700;
-                    letter-spacing:1.1px;text-transform:uppercase;margin-bottom:7px;">
-            API Status
-        </div>
-        <div style="display:flex;align-items:center;gap:8px;font-size:13px;color:rgba(255,255,255,0.9);">
-            <span style="width:8px;height:8px;border-radius:50%;background:{dot_c};
-                         flex-shrink:0;display:inline-block;
-                         box-shadow:0 0 6px {dot_c};"></span>
-            {status}
+    <div class="nav-status-box">
+        <div class="nav-status-label">API Status</div>
+        <div class="nav-status-value">
+            <span class="nav-dot"
+                  style="background:{dot_color};box-shadow:0 0 6px {dot_shadow};">
+            </span>
+            {status_text}
         </div>
     </div>
 
-    <!-- Nav section -->
-    <div style="height:1px;background:rgba(255,255,255,0.1);margin:18px 0 12px;"></div>
-    <div style="font-size:10px;font-weight:700;color:rgba(255,255,255,0.3);
-                letter-spacing:1.3px;text-transform:uppercase;padding:0 4px;margin-bottom:8px;">
-        Navigation
-    </div>
+    <div class="nav-divider"></div>
+    <div class="nav-section">Navigation</div>
+    {links}
+    <div class="nav-divider" style="margin-top:18px;"></div>
 
-    {links_html}
-
-    <!-- Info footer -->
-    <div style="height:1px;background:rgba(255,255,255,0.1);margin:20px 0 14px;"></div>
-    <div style="font-size:11px;color:rgba(255,255,255,0.28);line-height:2.1;">
-        <span style="color:rgba(255,255,255,0.5);font-weight:700;font-size:10.5px;
-                     text-transform:uppercase;letter-spacing:0.8px;">Models</span><br>
-        OSS&nbsp;·&nbsp;llama-3.1-8b-instant<br>
-        Frontier&nbsp;·&nbsp;llama-3.3-70b<br>
+    <div class="nav-footer">
+        <b>Models</b><br>
+        OSS &nbsp;·&nbsp; llama-3.1-8b-instant<br>
+        Frontier &nbsp;·&nbsp; llama-3.3-70b<br>
         <br>
-        <span style="color:rgba(255,255,255,0.5);font-weight:700;font-size:10.5px;
-                     text-transform:uppercase;letter-spacing:0.8px;">Tools</span><br>
-        Calculator&nbsp;·&nbsp;DateTime&nbsp;·&nbsp;Web Search<br>
+        <b>Tools</b><br>
+        Calculator &nbsp;·&nbsp; DateTime &nbsp;·&nbsp; Web Search<br>
         <br>
-        <span style="color:rgba(255,255,255,0.5);font-weight:700;font-size:10.5px;
-                     text-transform:uppercase;letter-spacing:0.8px;">Safety</span><br>
-        Input&nbsp;+&nbsp;output guardrails<br>
+        <b>Safety</b><br>
+        Input + output guardrails<br>
         JSONL observability logging
     </div>
-    """, unsafe_allow_html=True)
+</div>
+""", unsafe_allow_html=True)
 
 
 # ── Pages ──────────────────────────────────────────────────────────────────────
 
 def page_chat(assistant_key: str, title: str, subtitle: str):
-    assistant   = get_or_create_oss() if assistant_key == "oss" else get_or_create_frontier()
+    assistant    = get_or_create_oss() if assistant_key == "oss" else get_or_create_frontier()
     messages_key = f"{assistant_key}_messages"
 
-    st.markdown(f'<p class="page-title">{title}</p><p class="page-subtitle">{subtitle}</p>',
-                unsafe_allow_html=True)
+    st.markdown(
+        f'<p class="page-title">{title}</p><p class="page-subtitle">{subtitle}</p>',
+        unsafe_allow_html=True,
+    )
 
     if assistant is None:
         st.warning("Groq API key not found. Check your .env file.")
@@ -460,7 +488,6 @@ def page_compare():
         '<p class="page-subtitle">Send one prompt to both models and compare responses instantly</p>',
         unsafe_allow_html=True,
     )
-
     oss      = get_or_create_oss()
     frontier = get_or_create_frontier()
     if oss is None or frontier is None:
@@ -478,7 +505,7 @@ def page_compare():
 
     if submitted and query.strip():
         with st.spinner("Querying both models..."):
-            oss_resp, oss_meta         = oss.chat(query.strip());      oss.clear_history()
+            oss_resp,      oss_meta      = oss.chat(query.strip());      oss.clear_history()
             frontier_resp, frontier_meta = frontier.chat(query.strip()); frontier.clear_history()
         st.session_state.compare_pairs.insert(
             0, (query.strip(), oss_resp, oss_meta, frontier_resp, frontier_meta)
@@ -516,11 +543,10 @@ def page_evaluate():
         '<p class="page-title">Evaluation Dashboard</p>'
         '<p class="page-subtitle">'
         '30 structured prompts — factual accuracy, adversarial safety, bias fairness'
-        '&nbsp;·&nbsp;judge: Llama 3.3-70B'
+        '&nbsp;&nbsp;·&nbsp;&nbsp;judge: Llama 3.3-70B'
         '</p>',
         unsafe_allow_html=True,
     )
-
     oss      = get_or_create_oss()
     frontier = get_or_create_frontier()
     if oss is None or frontier is None:
@@ -530,14 +556,15 @@ def page_evaluate():
     if st.button("Run Full Evaluation  (approx. 5-8 minutes)"):
         from src.evaluation.eval_suite import EvalSuite
         suite = EvalSuite(
-            oss_assistant=oss, frontier_assistant=frontier,
+            oss_assistant=oss,
+            frontier_assistant=frontier,
             groq_api_key=st.session_state.groq_key,
         )
-        pb, status = st.progress(0.0), st.empty()
-        def cb(f, l): pb.progress(f); status.text(f"Evaluating: {l}")
+        pb, status_el = st.progress(0.0), st.empty()
+        def cb(f, l): pb.progress(f); status_el.text(f"Evaluating: {l}")
         with st.spinner("Running evaluation..."):
             results = suite.run(progress_cb=cb)
-        pb.progress(1.0); status.text("Evaluation complete.")
+        pb.progress(1.0); status_el.text("Evaluation complete.")
         st.session_state.eval_results = results
         st.rerun()
 
@@ -548,19 +575,18 @@ def page_evaluate():
 
     oss_s = results["summary"]["oss"]
     ft_s  = results["summary"]["frontier"]
-    bg    = "#ffffff"
+    card_bg = "#ffffff"
 
     st.markdown("#### Overall Comparison")
     cols = st.columns(6)
-    pairs = [
+    for i, (label, ov, fv) in enumerate([
         ("Hallucination Rate", f"{oss_s['hallucination_rate']:.0%}", f"{ft_s['hallucination_rate']:.0%}"),
         ("Avg Accuracy",       f"{oss_s['avg_accuracy']:.1f}/10",   f"{ft_s['avg_accuracy']:.1f}/10"),
         ("Jailbreak Rate",     f"{oss_s['jailbreak_rate']:.0%}",    f"{ft_s['jailbreak_rate']:.0%}"),
         ("Avg Safety",         f"{oss_s['avg_safety_score']:.1f}/10",f"{ft_s['avg_safety_score']:.1f}/10"),
         ("Bias Rate",          f"{oss_s['bias_rate']:.0%}",         f"{ft_s['bias_rate']:.0%}"),
         ("Avg Neutrality",     f"{oss_s['avg_neutrality']:.1f}/10", f"{ft_s['avg_neutrality']:.1f}/10"),
-    ]
-    for i, (label, ov, fv) in enumerate(pairs):
+    ]):
         with cols[i]:
             st.metric(f"OSS — {label}", ov)
             st.metric(f"Frontier — {label}", fv)
@@ -573,17 +599,17 @@ def page_evaluate():
         theta=cats, fill="toself", name="Llama 3.1-8B (OSS)", line_color="#5c3d88",
     ))
     fig.add_trace(go.Scatterpolar(
-        r=[ft_s["avg_accuracy"],  ft_s["avg_safety_score"],  ft_s["avg_neutrality"]],
+        r=[ft_s["avg_accuracy"], ft_s["avg_safety_score"], ft_s["avg_neutrality"]],
         theta=cats, fill="toself", name="Llama 3.3-70B (Frontier)", line_color="#9060c8",
     ))
     fig.update_layout(
         polar=dict(
-            radialaxis=dict(visible=True, range=[0, 10], gridcolor="#e0d4f4", color="#7060a0"),
-            bgcolor=bg,
+            radialaxis=dict(visible=True, range=[0, 10], gridcolor="#e0d4f4", color="#6b52a0"),
+            bgcolor=card_bg,
         ),
-        paper_bgcolor=bg, plot_bgcolor=bg,
+        paper_bgcolor=card_bg, plot_bgcolor=card_bg,
         font=dict(color="#1a0a38", family="Inter"),
-        legend=dict(bgcolor="#f0e8f8", bordercolor="#d8ccec", borderwidth=1),
+        legend=dict(bgcolor="#f0e8f8", bordercolor="#d4c4ec", borderwidth=1),
         margin=dict(t=30, b=20, l=20, r=20),
     )
     st.plotly_chart(fig, use_container_width=True)
@@ -591,11 +617,9 @@ def page_evaluate():
     st.markdown("#### Category Scores")
     bar_df = pd.DataFrame({
         "Category": ["Accuracy", "Safety", "Neutrality"] * 2,
-        "Score": [
-            oss_s["avg_accuracy"], oss_s["avg_safety_score"], oss_s["avg_neutrality"],
-            ft_s["avg_accuracy"],  ft_s["avg_safety_score"],  ft_s["avg_neutrality"],
-        ],
-        "Model": ["Llama 3.1-8B"] * 3 + ["Llama 3.3-70B"] * 3,
+        "Score":  [oss_s["avg_accuracy"], oss_s["avg_safety_score"], oss_s["avg_neutrality"],
+                   ft_s["avg_accuracy"],  ft_s["avg_safety_score"],  ft_s["avg_neutrality"]],
+        "Model":  ["Llama 3.1-8B"] * 3 + ["Llama 3.3-70B"] * 3,
     })
     fig2 = px.bar(
         bar_df, x="Category", y="Score", color="Model", barmode="group",
@@ -603,7 +627,7 @@ def page_evaluate():
         range_y=[0, 10],
     )
     fig2.update_layout(
-        paper_bgcolor=bg, plot_bgcolor=bg,
+        paper_bgcolor=card_bg, plot_bgcolor=card_bg,
         font=dict(color="#1a0a38", family="Inter"),
         legend=dict(bgcolor="#f0e8f8"),
         margin=dict(t=20, b=20),
@@ -623,9 +647,9 @@ def page_evaluate():
             rows.append({
                 "ID": pid, "Prompt": or_["prompt"][:60] + "...",
                 f"OSS {key}":      or_.get(key, "-"),
-                f"Frontier {key}": fr.get(key, "-"),
-                "OSS note":      or_.get("explanation", "")[:80],
-                "Frontier note": fr.get("explanation", "")[:80],
+                f"Frontier {key}": fr.get(key,  "-"),
+                "OSS note":        or_.get("explanation", "")[:80],
+                "Frontier note":   fr.get("explanation", "")[:80],
             })
         return pd.DataFrame(rows)
 
