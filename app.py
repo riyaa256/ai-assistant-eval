@@ -302,13 +302,13 @@ def render_nav(active: str):
         is_active = active == page_id
         cls = "nav-item active" if is_active else "nav-item"
         arrow = "&#9656;&#160;&#160;" if is_active else "&#160;&#160;&#160;&#160;"
-        links_html += f'<a href="?page={page_id}" class="{cls}">{arrow}{label}</a>\n'
+        js = f"window.top.location.search='?page={page_id}'; return false;"
+        links_html += f'<a href="#" onclick="{js}" class="{cls}">{arrow}{label}</a>\n'
 
     html = f"""<!DOCTYPE html>
 <html>
 <head>
 <meta charset="utf-8">
-<base target="_top">
 <style>
   * {{ margin:0; padding:0; box-sizing:border-box; font-family:-apple-system,'Inter',sans-serif; }}
   html, body {{ height:100%; background:#38265a; }}
