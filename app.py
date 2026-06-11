@@ -10,7 +10,6 @@ from dotenv import load_dotenv
 load_dotenv()
 
 import streamlit as st
-import streamlit.components.v1 as components
 
 st.set_page_config(
     page_title="AI Eval Platform",
@@ -35,21 +34,78 @@ st.markdown("""
 
 .block-container { padding: 16px !important; max-width: 100% !important; }
 
-/* ── Nav column: remove padding so iframe fills cleanly ── */
+/* ── Nav column background — target outer div + all inner wrappers ── */
 [data-testid="column"]:first-child,
 [data-testid="stColumn"]:first-child {
-    padding: 0 6px 0 0 !important;
-    min-height: 0 !important;
-}
-/* Remove iframe border & scrollbar */
-[data-testid="column"]:first-child iframe,
-[data-testid="stColumn"]:first-child iframe {
-    border: none !important;
+    background: #38265a !important;
     border-radius: 20px !important;
-    display: block !important;
+    padding: 24px 14px 24px !important;
+    min-height: calc(100vh - 40px) !important;
+}
+[data-testid="column"]:first-child [data-testid="stVerticalBlockBorderWrapper"],
+[data-testid="stColumn"]:first-child [data-testid="stVerticalBlockBorderWrapper"] {
+    background: transparent !important;
+    border: none !important;
+    border-radius: 0 !important;
+    padding: 0 !important;
+}
+[data-testid="column"]:first-child [data-testid="stVerticalBlock"],
+[data-testid="stColumn"]:first-child [data-testid="stVerticalBlock"] {
+    background: transparent !important;
+    gap: 2px !important;
+}
+/* Nav text elements */
+[data-testid="column"]:first-child p,
+[data-testid="column"]:first-child div,
+[data-testid="stColumn"]:first-child p,
+[data-testid="stColumn"]:first-child div {
+    color: rgba(255,255,255,0.7);
+}
+/* Nav buttons */
+[data-testid="column"]:first-child .stButton > button,
+[data-testid="stColumn"]:first-child .stButton > button {
+    background: transparent !important;
+    color: rgba(255,255,255,0.65) !important;
+    border: none !important;
+    border-radius: 10px !important;
+    text-align: left !important;
+    justify-content: flex-start !important;
+    width: 100% !important;
+    padding: 9px 14px !important;
+    font-size: 13.5px !important;
+    font-weight: 500 !important;
+    box-shadow: none !important;
+    margin: 1px 0 !important;
+    letter-spacing: 0.1px !important;
+}
+[data-testid="column"]:first-child .stButton > button:hover,
+[data-testid="stColumn"]:first-child .stButton > button:hover {
+    background: rgba(255,255,255,0.1) !important;
+    color: #fff !important;
+    border: none !important;
+}
+[data-testid="column"]:first-child .stButton > button:focus,
+[data-testid="column"]:first-child .stButton > button:active,
+[data-testid="stColumn"]:first-child .stButton > button:focus,
+[data-testid="stColumn"]:first-child .stButton > button:active {
+    box-shadow: none !important;
+    border: none !important;
+    outline: none !important;
+}
+/* Hide button focus rings in nav */
+[data-testid="column"]:first-child [data-testid="baseButton-secondary"]:focus-visible,
+[data-testid="stColumn"]:first-child [data-testid="baseButton-secondary"]:focus-visible {
+    outline: none !important;
+    box-shadow: none !important;
+}
+/* Dividers inside nav col */
+[data-testid="column"]:first-child hr,
+[data-testid="stColumn"]:first-child hr {
+    border-color: rgba(255,255,255,0.12) !important;
+    margin: 10px 0 !important;
 }
 
-/* ── Buttons ── */
+/* ── Buttons (main content area) ── */
 .stButton > button {
     background: #ede5f8 !important;
     color: #2d1050 !important;
@@ -293,81 +349,66 @@ NAV_PAGES = [
 
 def render_nav(active: str):
     api_ok = bool(st.session_state.groq_key)
-    dot_color = "#6edd7a" if api_ok else "#f08080"
-    dot_glow  = "rgba(110,221,122,0.55)" if api_ok else "rgba(240,128,128,0.55)"
-    status_text = "Groq connected" if api_ok else "No API key"
+    dot_color  = "#6edd7a" if api_ok else "#f08080"
+    status_txt = "Groq connected" if api_ok else "No API key"
 
-    links_html = ""
+    # Logo
+    st.markdown(
+        f'<p style="font-size:21px;font-weight:700;color:#fff;letter-spacing:-0.5px;margin:0 0 18px 2px;line-height:1;">'
+        f'Eval<span style="color:#9b6fd4;">Lab</span></p>',
+        unsafe_allow_html=True,
+    )
+
+    # Status badge
+    st.markdown(
+        f'<div style="background:rgba(255,255,255,0.1);border-radius:12px;padding:10px 12px;margin-bottom:4px;">'
+        f'<div style="font-size:9.5px;font-weight:700;letter-spacing:1.1px;text-transform:uppercase;color:rgba(255,255,255,0.35);margin-bottom:6px;">API Status</div>'
+        f'<div style="display:flex;align-items:center;gap:7px;font-size:12.5px;color:rgba(255,255,255,0.85);font-weight:500;">'
+        f'<span style="width:7px;height:7px;border-radius:50%;background:{dot_color};display:inline-block;flex-shrink:0;"></span>'
+        f'{status_txt}</div></div>',
+        unsafe_allow_html=True,
+    )
+
+    st.markdown('<hr>', unsafe_allow_html=True)
+
+    # Section label
+    st.markdown(
+        '<p style="font-size:9.5px;font-weight:700;color:rgba(255,255,255,0.3);letter-spacing:1.2px;'
+        'text-transform:uppercase;margin:0 0 6px 2px;">Navigation</p>',
+        unsafe_allow_html=True,
+    )
+
+    # Nav items — st.button() is the only reliable Streamlit nav mechanism
     for page_id, label in NAV_PAGES:
-        is_active = active == page_id
-        cls = "nav-item active" if is_active else "nav-item"
-        arrow = "&#9656;&#160;&#160;" if is_active else "&#160;&#160;&#160;&#160;"
-        js = f"window.top.location.search='?page={page_id}'; return false;"
-        links_html += f'<a href="#" onclick="{js}" class="{cls}">{arrow}{label}</a>\n'
+        if active == page_id:
+            # Active: styled div (not a button — just shows state)
+            st.markdown(
+                f'<div style="background:rgba(255,255,255,0.16);color:#fff;font-weight:600;'
+                f'padding:9px 14px;border-radius:10px;font-size:13.5px;margin:1px 0;">'
+                f'&#9656;&#160;&#160;{label}</div>',
+                unsafe_allow_html=True,
+            )
+        else:
+            if st.button(label, key=f"nav_{page_id}", use_container_width=True):
+                st.query_params["page"] = page_id
+                st.rerun()
 
-    html = f"""<!DOCTYPE html>
-<html>
-<head>
-<meta charset="utf-8">
-<style>
-  * {{ margin:0; padding:0; box-sizing:border-box; font-family:-apple-system,'Inter',sans-serif; }}
-  html, body {{ height:100%; background:#38265a; }}
-  body {{ padding:28px 18px 24px; display:flex; flex-direction:column; }}
+    st.markdown('<hr>', unsafe_allow_html=True)
 
-  .logo {{ font-size:22px; font-weight:700; color:#fff; letter-spacing:-0.5px; margin-bottom:22px; }}
-  .logo span {{ color:#9b6fd4; }}
-
-  .status-box {{ background:rgba(255,255,255,0.1); border-radius:12px; padding:12px 14px; margin-bottom:16px; }}
-  .status-lbl {{ font-size:10px; font-weight:700; color:rgba(255,255,255,0.4); letter-spacing:1.2px; text-transform:uppercase; margin-bottom:7px; }}
-  .status-val {{ display:flex; align-items:center; gap:8px; font-size:13px; color:rgba(255,255,255,0.9); font-weight:500; }}
-  .dot {{ width:8px; height:8px; border-radius:50%; background:{dot_color}; box-shadow:0 0 6px {dot_glow}; flex-shrink:0; }}
-
-  .divider {{ height:1px; background:rgba(255,255,255,0.1); margin:0 0 14px; }}
-  .section {{ font-size:10px; font-weight:700; color:rgba(255,255,255,0.3); letter-spacing:1.3px; text-transform:uppercase; margin-bottom:8px; padding:0 4px; }}
-
-  a.nav-item {{
-    display:block; color:rgba(255,255,255,0.6); text-decoration:none;
-    padding:10px 14px; border-radius:10px; font-size:13.5px; font-weight:500;
-    margin-bottom:3px; transition:background 0.15s,color 0.15s; letter-spacing:0.1px;
-  }}
-  a.nav-item:hover {{ background:rgba(255,255,255,0.1); color:#fff; }}
-  a.nav-item.active {{ background:rgba(255,255,255,0.16); color:#fff; font-weight:600; }}
-
-  .footer {{ font-size:11px; color:rgba(255,255,255,0.28); line-height:1.9; margin-top:auto; padding-top:8px; }}
-  .footer b {{ display:block; color:rgba(255,255,255,0.48); font-size:10px; text-transform:uppercase; letter-spacing:0.8px; margin-top:10px; }}
-  .footer b:first-child {{ margin-top:0; }}
-</style>
-</head>
-<body>
-  <div class="logo">Eval<span>Lab</span></div>
-
-  <div class="status-box">
-    <div class="status-lbl">API Status</div>
-    <div class="status-val">
-      <span class="dot"></span>
-      {status_text}
-    </div>
-  </div>
-
-  <div class="divider"></div>
-  <div class="section">Navigation</div>
-  {links_html}
-  <div class="divider" style="margin-top:18px;"></div>
-
-  <div class="footer">
-    <b>Models</b>
-    OSS &middot; llama-3.1-8b-instant<br>
-    Frontier &middot; llama-3.3-70b
-    <b>Tools</b>
-    Calculator &middot; DateTime &middot; Web Search
-    <b>Safety</b>
-    Input + output guardrails<br>
-    JSONL observability logging
-  </div>
-</body>
-</html>"""
-
-    components.html(html, height=700, scrolling=False)
+    # Footer info
+    st.markdown(
+        '<p style="font-size:10.5px;color:rgba(255,255,255,0.28);line-height:1.9;margin-top:4px;">'
+        '<span style="display:block;color:rgba(255,255,255,0.45);font-weight:600;font-size:9.5px;'
+        'text-transform:uppercase;letter-spacing:0.8px;margin-bottom:2px;">Models</span>'
+        'OSS &middot; llama-3.1-8b<br>Frontier &middot; llama-3.3-70b<br><br>'
+        '<span style="display:block;color:rgba(255,255,255,0.45);font-weight:600;font-size:9.5px;'
+        'text-transform:uppercase;letter-spacing:0.8px;margin-bottom:2px;">Tools</span>'
+        'Calculator &middot; DateTime &middot; Web<br><br>'
+        '<span style="display:block;color:rgba(255,255,255,0.45);font-weight:600;font-size:9.5px;'
+        'text-transform:uppercase;letter-spacing:0.8px;margin-bottom:2px;">Safety</span>'
+        'Input + output guardrails</p>',
+        unsafe_allow_html=True,
+    )
 
 
 # ── Pages ──────────────────────────────────────────────────────────────────────
