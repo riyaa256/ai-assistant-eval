@@ -52,7 +52,18 @@ st.markdown("""
 [data-testid="column"]:first-child [data-testid="stVerticalBlock"],
 [data-testid="stColumn"]:first-child [data-testid="stVerticalBlock"] {
     background: transparent !important;
-    gap: 2px !important;
+    gap: 0 !important;
+}
+/* Collapse all element-container margins inside nav */
+[data-testid="column"]:first-child [data-testid="element-container"],
+[data-testid="stColumn"]:first-child [data-testid="element-container"] {
+    margin: 0 !important;
+    padding: 0 !important;
+}
+[data-testid="column"]:first-child [data-testid="stButton"],
+[data-testid="stColumn"]:first-child [data-testid="stButton"] {
+    margin: 0 !important;
+    padding: 0 !important;
 }
 /* Nav text elements */
 [data-testid="column"]:first-child p,
@@ -347,44 +358,48 @@ NAV_PAGES = [
 ]
 
 
+DIVIDER = '<div style="height:1px;background:rgba(255,255,255,0.12);margin:12px 0 10px;"></div>'
+
+
 def render_nav(active: str):
-    api_ok = bool(st.session_state.groq_key)
+    api_ok     = bool(st.session_state.groq_key)
     dot_color  = "#6edd7a" if api_ok else "#f08080"
     status_txt = "Groq connected" if api_ok else "No API key"
 
     # Logo
     st.markdown(
-        f'<p style="font-size:21px;font-weight:700;color:#fff;letter-spacing:-0.5px;margin:0 0 18px 2px;line-height:1;">'
+        f'<p style="font-size:21px;font-weight:700;color:#fff;letter-spacing:-0.5px;'
+        f'margin:0 0 14px 2px;line-height:1;padding:0;">'
         f'Eval<span style="color:#9b6fd4;">Lab</span></p>',
         unsafe_allow_html=True,
     )
 
     # Status badge
     st.markdown(
-        f'<div style="background:rgba(255,255,255,0.1);border-radius:12px;padding:10px 12px;margin-bottom:4px;">'
-        f'<div style="font-size:9.5px;font-weight:700;letter-spacing:1.1px;text-transform:uppercase;color:rgba(255,255,255,0.35);margin-bottom:6px;">API Status</div>'
-        f'<div style="display:flex;align-items:center;gap:7px;font-size:12.5px;color:rgba(255,255,255,0.85);font-weight:500;">'
-        f'<span style="width:7px;height:7px;border-radius:50%;background:{dot_color};display:inline-block;flex-shrink:0;"></span>'
-        f'{status_txt}</div></div>',
+        f'<div style="background:rgba(255,255,255,0.1);border-radius:11px;padding:9px 12px;">'
+        f'<div style="font-size:9px;font-weight:700;letter-spacing:1.1px;text-transform:uppercase;'
+        f'color:rgba(255,255,255,0.35);margin-bottom:5px;">API Status</div>'
+        f'<div style="display:flex;align-items:center;gap:7px;font-size:12.5px;'
+        f'color:rgba(255,255,255,0.85);font-weight:500;">'
+        f'<span style="width:7px;height:7px;border-radius:50%;background:{dot_color};'
+        f'display:inline-block;flex-shrink:0;"></span>{status_txt}</div></div>',
         unsafe_allow_html=True,
     )
 
-    st.markdown('<hr>', unsafe_allow_html=True)
-
-    # Section label
+    # Divider + section label (one markdown call = one element = no extra gap)
     st.markdown(
-        '<p style="font-size:9.5px;font-weight:700;color:rgba(255,255,255,0.3);letter-spacing:1.2px;'
-        'text-transform:uppercase;margin:0 0 6px 2px;">Navigation</p>',
+        f'{DIVIDER}'
+        f'<p style="font-size:9px;font-weight:700;color:rgba(255,255,255,0.3);letter-spacing:1.2px;'
+        f'text-transform:uppercase;margin:0 0 4px 2px;padding:0;">Navigation</p>',
         unsafe_allow_html=True,
     )
 
-    # Nav items — st.button() is the only reliable Streamlit nav mechanism
+    # Nav items
     for page_id, label in NAV_PAGES:
         if active == page_id:
-            # Active: styled div (not a button — just shows state)
             st.markdown(
                 f'<div style="background:rgba(255,255,255,0.16);color:#fff;font-weight:600;'
-                f'padding:9px 14px;border-radius:10px;font-size:13.5px;margin:1px 0;">'
+                f'padding:9px 14px;border-radius:10px;font-size:13.5px;">'
                 f'&#9656;&#160;&#160;{label}</div>',
                 unsafe_allow_html=True,
             )
@@ -393,20 +408,19 @@ def render_nav(active: str):
                 st.query_params["page"] = page_id
                 st.rerun()
 
-    st.markdown('<hr>', unsafe_allow_html=True)
-
-    # Footer info
+    # Footer
     st.markdown(
-        '<p style="font-size:10.5px;color:rgba(255,255,255,0.28);line-height:1.9;margin-top:4px;">'
-        '<span style="display:block;color:rgba(255,255,255,0.45);font-weight:600;font-size:9.5px;'
-        'text-transform:uppercase;letter-spacing:0.8px;margin-bottom:2px;">Models</span>'
-        'OSS &middot; llama-3.1-8b<br>Frontier &middot; llama-3.3-70b<br><br>'
-        '<span style="display:block;color:rgba(255,255,255,0.45);font-weight:600;font-size:9.5px;'
-        'text-transform:uppercase;letter-spacing:0.8px;margin-bottom:2px;">Tools</span>'
-        'Calculator &middot; DateTime &middot; Web<br><br>'
-        '<span style="display:block;color:rgba(255,255,255,0.45);font-weight:600;font-size:9.5px;'
-        'text-transform:uppercase;letter-spacing:0.8px;margin-bottom:2px;">Safety</span>'
-        'Input + output guardrails</p>',
+        f'{DIVIDER}'
+        f'<p style="font-size:10.5px;color:rgba(255,255,255,0.28);line-height:1.85;margin:0;padding:0;">'
+        f'<span style="display:block;color:rgba(255,255,255,0.42);font-weight:600;font-size:9px;'
+        f'text-transform:uppercase;letter-spacing:0.8px;margin-bottom:1px;">Models</span>'
+        f'OSS &middot; llama-3.1-8b<br>Frontier &middot; llama-3.3-70b<br><br>'
+        f'<span style="display:block;color:rgba(255,255,255,0.42);font-weight:600;font-size:9px;'
+        f'text-transform:uppercase;letter-spacing:0.8px;margin-bottom:1px;">Tools</span>'
+        f'Calculator &middot; DateTime &middot; Web<br><br>'
+        f'<span style="display:block;color:rgba(255,255,255,0.42);font-weight:600;font-size:9px;'
+        f'text-transform:uppercase;letter-spacing:0.8px;margin-bottom:1px;">Safety</span>'
+        f'Input + output guardrails</p>',
         unsafe_allow_html=True,
     )
 
