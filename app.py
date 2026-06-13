@@ -34,7 +34,7 @@ st.markdown("""
 
 .block-container { padding: 16px !important; max-width: 100% !important; }
 
-/* ── Nav column background — target outer div + all inner wrappers ── */
+/* ── Nav column background ── */
 [data-testid="column"]:first-child,
 [data-testid="stColumn"]:first-child {
     background: #38265a !important;
@@ -46,74 +46,72 @@ st.markdown("""
 [data-testid="stColumn"]:first-child [data-testid="stVerticalBlockBorderWrapper"] {
     background: transparent !important;
     border: none !important;
-    border-radius: 0 !important;
     padding: 0 !important;
 }
 [data-testid="column"]:first-child [data-testid="stVerticalBlock"],
 [data-testid="stColumn"]:first-child [data-testid="stVerticalBlock"] {
     background: transparent !important;
     gap: 0 !important;
+    row-gap: 0 !important;
 }
-/* Collapse all element-container margins inside nav */
 [data-testid="column"]:first-child [data-testid="element-container"],
 [data-testid="stColumn"]:first-child [data-testid="element-container"] {
     margin: 0 !important;
     padding: 0 !important;
 }
-[data-testid="column"]:first-child [data-testid="stButton"],
-[data-testid="stColumn"]:first-child [data-testid="stButton"] {
-    margin: 0 !important;
+
+/* ── Nav radio widget ── */
+/* Remove all radio wrapper padding/margin */
+[data-testid="column"]:first-child [data-testid="stRadio"],
+[data-testid="stColumn"]:first-child [data-testid="stRadio"] {
     padding: 0 !important;
+    margin: 0 !important;
 }
-/* Nav text elements */
-[data-testid="column"]:first-child p,
-[data-testid="column"]:first-child div,
-[data-testid="stColumn"]:first-child p,
-[data-testid="stColumn"]:first-child div {
-    color: rgba(255,255,255,0.7);
-}
-/* Nav buttons */
-[data-testid="column"]:first-child .stButton > button,
-[data-testid="stColumn"]:first-child .stButton > button {
+[data-testid="column"]:first-child [data-testid="stRadio"] > div,
+[data-testid="stColumn"]:first-child [data-testid="stRadio"] > div {
+    padding: 0 !important;
+    margin: 0 !important;
+    gap: 2px !important;
     background: transparent !important;
-    color: rgba(255,255,255,0.65) !important;
-    border: none !important;
-    border-radius: 10px !important;
-    text-align: left !important;
-    justify-content: flex-start !important;
-    width: 100% !important;
+}
+/* Each radio option row */
+[data-testid="column"]:first-child [data-testid="stRadio"] label,
+[data-testid="stColumn"]:first-child [data-testid="stRadio"] label {
+    display: flex !important;
+    align-items: center !important;
     padding: 9px 14px !important;
+    border-radius: 10px !important;
+    color: rgba(255,255,255,0.65) !important;
     font-size: 13.5px !important;
     font-weight: 500 !important;
-    box-shadow: none !important;
-    margin: 1px 0 !important;
     letter-spacing: 0.1px !important;
+    cursor: pointer !important;
+    width: 100% !important;
+    margin: 0 !important;
+    transition: background 0.15s, color 0.15s !important;
+    background: transparent !important;
 }
-[data-testid="column"]:first-child .stButton > button:hover,
-[data-testid="stColumn"]:first-child .stButton > button:hover {
+[data-testid="column"]:first-child [data-testid="stRadio"] label:hover,
+[data-testid="stColumn"]:first-child [data-testid="stRadio"] label:hover {
     background: rgba(255,255,255,0.1) !important;
     color: #fff !important;
-    border: none !important;
 }
-[data-testid="column"]:first-child .stButton > button:focus,
-[data-testid="column"]:first-child .stButton > button:active,
-[data-testid="stColumn"]:first-child .stButton > button:focus,
-[data-testid="stColumn"]:first-child .stButton > button:active {
-    box-shadow: none !important;
-    border: none !important;
-    outline: none !important;
+/* Hide the radio circle + its container */
+[data-testid="column"]:first-child [data-testid="stRadio"] label > div:first-child,
+[data-testid="stColumn"]:first-child [data-testid="stRadio"] label > div:first-child {
+    display: none !important;
 }
-/* Hide button focus rings in nav */
-[data-testid="column"]:first-child [data-testid="baseButton-secondary"]:focus-visible,
-[data-testid="stColumn"]:first-child [data-testid="baseButton-secondary"]:focus-visible {
-    outline: none !important;
-    box-shadow: none !important;
+/* Selected/active state */
+[data-testid="column"]:first-child [data-testid="stRadio"] label:has(input:checked),
+[data-testid="stColumn"]:first-child [data-testid="stRadio"] label:has(input:checked) {
+    background: rgba(255,255,255,0.16) !important;
+    color: #fff !important;
+    font-weight: 600 !important;
 }
-/* Dividers inside nav col */
-[data-testid="column"]:first-child hr,
-[data-testid="stColumn"]:first-child hr {
-    border-color: rgba(255,255,255,0.12) !important;
-    margin: 10px 0 !important;
+/* Hide collapsed radio label (empty string label) */
+[data-testid="column"]:first-child [data-testid="stRadio"] > div > div:not([role="radiogroup"]),
+[data-testid="stColumn"]:first-child [data-testid="stRadio"] > div > div:not([role="radiogroup"]) {
+    display: none !important;
 }
 
 /* ── Buttons (main content area) ── */
@@ -358,68 +356,50 @@ NAV_PAGES = [
 ]
 
 
-DIVIDER = '<div style="height:1px;background:rgba(255,255,255,0.12);margin:12px 0 10px;"></div>'
-
-
 def render_nav(active: str):
     api_ok     = bool(st.session_state.groq_key)
     dot_color  = "#6edd7a" if api_ok else "#f08080"
     status_txt = "Groq connected" if api_ok else "No API key"
 
-    # Logo
+    # ── Element 1: Logo + Status + divider + "Navigation" label (single element) ──
     st.markdown(
-        f'<p style="font-size:21px;font-weight:700;color:#fff;letter-spacing:-0.5px;'
-        f'margin:0 0 14px 2px;line-height:1;padding:0;">'
-        f'Eval<span style="color:#9b6fd4;">Lab</span></p>',
-        unsafe_allow_html=True,
-    )
-
-    # Status badge
-    st.markdown(
+        f'<p style="font-size:21px;font-weight:700;color:#fff;letter-spacing:-0.5px;margin:0 0 14px 2px;line-height:1;">'
+        f'Eval<span style="color:#9b6fd4;">Lab</span></p>'
         f'<div style="background:rgba(255,255,255,0.1);border-radius:11px;padding:9px 12px;">'
-        f'<div style="font-size:9px;font-weight:700;letter-spacing:1.1px;text-transform:uppercase;'
-        f'color:rgba(255,255,255,0.35);margin-bottom:5px;">API Status</div>'
-        f'<div style="display:flex;align-items:center;gap:7px;font-size:12.5px;'
-        f'color:rgba(255,255,255,0.85);font-weight:500;">'
-        f'<span style="width:7px;height:7px;border-radius:50%;background:{dot_color};'
-        f'display:inline-block;flex-shrink:0;"></span>{status_txt}</div></div>',
+        f'<div style="font-size:9px;font-weight:700;letter-spacing:1.1px;text-transform:uppercase;color:rgba(255,255,255,0.35);margin-bottom:5px;">API Status</div>'
+        f'<div style="display:flex;align-items:center;gap:7px;font-size:12.5px;color:rgba(255,255,255,0.85);font-weight:500;">'
+        f'<span style="width:7px;height:7px;border-radius:50%;background:{dot_color};display:inline-block;flex-shrink:0;"></span>'
+        f'{status_txt}</div></div>'
+        f'<div style="height:1px;background:rgba(255,255,255,0.12);margin:12px 0 8px;"></div>'
+        f'<p style="font-size:9px;font-weight:700;color:rgba(255,255,255,0.3);letter-spacing:1.2px;text-transform:uppercase;margin:0 0 2px 2px;">Navigation</p>',
         unsafe_allow_html=True,
     )
 
-    # Divider + section label (one markdown call = one element = no extra gap)
-    st.markdown(
-        f'{DIVIDER}'
-        f'<p style="font-size:9px;font-weight:700;color:rgba(255,255,255,0.3);letter-spacing:1.2px;'
-        f'text-transform:uppercase;margin:0 0 4px 2px;padding:0;">Navigation</p>',
-        unsafe_allow_html=True,
+    # ── Element 2: Radio nav (single widget = zero gap between items) ──
+    page_ids   = [p[0] for p in NAV_PAGES]
+    page_names = {p[0]: p[1] for p in NAV_PAGES}
+    current    = page_ids.index(active) if active in page_ids else 0
+
+    chosen = st.radio(
+        "nav",
+        options=page_ids,
+        format_func=lambda x: page_names[x],
+        index=current,
+        label_visibility="collapsed",
     )
+    if chosen != active:
+        st.query_params["page"] = chosen
+        st.rerun()
 
-    # Nav items
-    for page_id, label in NAV_PAGES:
-        if active == page_id:
-            st.markdown(
-                f'<div style="background:rgba(255,255,255,0.16);color:#fff;font-weight:600;'
-                f'padding:9px 14px;border-radius:10px;font-size:13.5px;">'
-                f'&#9656;&#160;&#160;{label}</div>',
-                unsafe_allow_html=True,
-            )
-        else:
-            if st.button(label, key=f"nav_{page_id}", use_container_width=True):
-                st.query_params["page"] = page_id
-                st.rerun()
-
-    # Footer
+    # ── Element 3: divider + footer (single element) ──
     st.markdown(
-        f'{DIVIDER}'
-        f'<p style="font-size:10.5px;color:rgba(255,255,255,0.28);line-height:1.85;margin:0;padding:0;">'
-        f'<span style="display:block;color:rgba(255,255,255,0.42);font-weight:600;font-size:9px;'
-        f'text-transform:uppercase;letter-spacing:0.8px;margin-bottom:1px;">Models</span>'
+        f'<div style="height:1px;background:rgba(255,255,255,0.12);margin:10px 0 10px;"></div>'
+        f'<p style="font-size:10.5px;color:rgba(255,255,255,0.28);line-height:1.85;margin:0;">'
+        f'<span style="display:block;color:rgba(255,255,255,0.42);font-weight:600;font-size:9px;text-transform:uppercase;letter-spacing:0.8px;margin-bottom:1px;">Models</span>'
         f'OSS &middot; llama-3.1-8b<br>Frontier &middot; llama-3.3-70b<br><br>'
-        f'<span style="display:block;color:rgba(255,255,255,0.42);font-weight:600;font-size:9px;'
-        f'text-transform:uppercase;letter-spacing:0.8px;margin-bottom:1px;">Tools</span>'
+        f'<span style="display:block;color:rgba(255,255,255,0.42);font-weight:600;font-size:9px;text-transform:uppercase;letter-spacing:0.8px;margin-bottom:1px;">Tools</span>'
         f'Calculator &middot; DateTime &middot; Web<br><br>'
-        f'<span style="display:block;color:rgba(255,255,255,0.42);font-weight:600;font-size:9px;'
-        f'text-transform:uppercase;letter-spacing:0.8px;margin-bottom:1px;">Safety</span>'
+        f'<span style="display:block;color:rgba(255,255,255,0.42);font-weight:600;font-size:9px;text-transform:uppercase;letter-spacing:0.8px;margin-bottom:1px;">Safety</span>'
         f'Input + output guardrails</p>',
         unsafe_allow_html=True,
     )
